@@ -1,0 +1,5 @@
+{
+  "name": "E-Learning Platform Prototype",
+  "description": "A modern e-learning platform prototype similar to Coursera or Crehana, featuring progressive lesson unlocking and a strictly controlled YouTube video player for an immersive learning experience.",
+  "requestFramePermissions": []
+}
