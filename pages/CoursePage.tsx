@@ -1,116 +1,228 @@
-import React, { useState, useCallback, useMemo } from 'react';
-import type { Module, Lesson, Notification, Course } from '../types';
-import Sidebar from '../components/Sidebar';
-import VideoPlayer from '../components/VideoPlayer';
-import LessonContent from '../components/LessonContent';
-import NotificationBell from '../components/NotificationBell';
+import React, { useState, useMemo } from 'react';
+import { useParams, useNavigate } from 'react-router-dom';
+import { useCourses } from '../context/CourseContext';
+import { useUser } from '../context/UserContext';
+import { useBookmarks } from '../context/BookmarkContext';
+import QuizComponent from '../components/QuizComponent';
+import CommunityPage from './CommunityPage';
+import Confetti from '../components/Confetti';
 
-const initialNotifications: Notification[] = [
-    { id: 1, message: '¡Has completado el curso de Diseño Web!', read: false },
-    { id: 2, message: 'Nueva lección disponible en el Módulo 2', read: false },
-    { id: 4, message: '¡Bienvenido a la plataforma!', read: false },
-];
+const CoursePage: React.FC = () => {
+  const { courseId } = useParams<{ courseId: string }>();
+  const navigate = useNavigate();
+  const { getCourse } = useCourses();
+  const { completeQuiz } = useUser();
+  const { addBookmark, removeBookmark, isBookmarked } = useBookmarks();
 
-interface CoursePageProps {
-    course: Course;
-    onExitCourse: () => void;
-}
+  const course = useMemo(() => {
+    return getCourse(Number(courseId));
+  }, [courseId, getCourse]);
 
-const CoursePage: React.FC<CoursePageProps> = ({ course, onExitCourse }) => {
-  const [completedLessons, setCompletedLessons] = useState<Set<number>>(new Set());
-  const [activeLessonId, setActiveLessonId] = useState<number>(course.modules[0].lessons[0].id);
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
+  const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
+  const [showQuiz, setShowQuiz] = useState(false);
+  const [showCommunity, setShowCommunity] = useState(false);
+  const [showConfetti, setShowConfetti] = useState(false);
 
-  const allLessons: Lesson[] = useMemo(() => course.modules.flatMap(module => module.lessons), [course]);
-  const activeLesson = useMemo(() => allLessons.find(lesson => lesson.id === activeLessonId), [allLessons, activeLessonId]);
-
-  const handleLessonComplete = useCallback(() => {
-    if (!activeLesson) return;
-
-    setCompletedLessons(prev => new Set(prev).add(activeLesson.id));
-
-    const currentLessonIndex = allLessons.findIndex(lesson => lesson.id === activeLesson.id);
-    const nextLesson = allLessons[currentLessonIndex + 1];
-
-    if (nextLesson) {
-      setActiveLessonId(nextLesson.id);
-      setNotifications(prev => [
-        { id: Date.now(), message: `Nueva lección desbloqueada: ${nextLesson.title}`, read: false },
-        ...prev
-      ]);
-    } else {
-        setNotifications(prev => [
-        { id: Date.now(), message: `¡Felicidades! Has completado ${course.title}.`, read: false },
-        ...prev
-      ]);
-    }
-  }, [activeLesson, allLessons, course.title]);
-  
-  const handleSelectLesson = useCallback((lessonId: number) => {
-     setActiveLessonId(lessonId);
-  }, []);
-  
-  const handleMarkNotificationAsRead = useCallback((notificationId: number) => {
-    setNotifications(prev => 
-        prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
-    );
-  }, []);
-
-  const handleMarkAllNotificationsAsRead = useCallback(() => {
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
-  }, []);
-
-  if (!activeLesson) {
+  if (!course) {
     return (
-      <div className="flex h-screen bg-gray-50">
-        <Sidebar 
-          courseTitle={course.title}
-          modules={course.modules}
-          activeLessonId={activeLessonId}
-          completedLessons={completedLessons}
-          onSelectLesson={handleSelectLesson}
-        />
-        <main className="flex-1 flex flex-col items-center justify-center">
-            <p className="text-gray-500">Cargando lección...</p>
-        </main>
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="text-center">
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Curso no encontrado</h2>
+          <button onClick={() => navigate('/dashboard')} className="text-blue-600 hover:underline">
+            Volver al Dashboard
+          </button>
+        </div>
       </div>
     );
   }
 
+  const currentModule = course.modules[currentModuleIndex];
+  const currentLesson = currentModule?.lessons[currentLessonIndex];
+
+  const handleLessonSelect = (mIndex: number, lIndex: number) => {
+    setCurrentModuleIndex(mIndex);
+    setCurrentLessonIndex(lIndex);
+    setShowQuiz(false); // Reset quiz view when changing lessons
+    setShowCommunity(false); // Reset to lesson view when changing lessons
+  };
+
+  const handleExitCourse = () => {
+    navigate('/dashboard');
+  };
+
+  const handleQuizComplete = (score: number, total: number) => {
+    if (currentLesson && currentLesson.quiz) {
+      completeQuiz(currentLesson.quiz.id, score);
+      if (score / total >= 0.8) {
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 5000);
+      }
+    }
+  };
+
+  const toggleBookmark = () => {
+    if (!currentLesson) return;
+
+    if (isBookmarked(currentLesson.id)) {
+      removeBookmark(currentLesson.id);
+    } else {
+      addBookmark({
+        courseId: course.id,
+        lessonId: currentLesson.id,
+        courseTitle: course.title,
+        lessonTitle: currentLesson.title
+      });
+    }
+  };
+
   return (
-    <div className="flex flex-col md:flex-row h-screen">
-      <Sidebar 
-        courseTitle={course.title}
-        modules={course.modules}
-        activeLessonId={activeLessonId}
-        completedLessons={completedLessons}
-        onSelectLesson={handleSelectLesson}
-      />
-      <main className="w-full md:w-3/4 lg:w-4/5 h-full overflow-y-auto">
-         <header className="flex justify-between items-center p-4 sticky top-0 z-20 bg-gray-50/80 backdrop-blur-sm border-b border-gray-100">
-             <button
-                onClick={onExitCourse}
-                className="flex items-center gap-2 text-sm text-gray-600 hover:text-gray-900 font-semibold transition-colors p-2 rounded-md hover:bg-gray-200/50"
-             >
-                <ion-icon name="arrow-back-outline"></ion-icon>
-                Volver al Dashboard
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      <Confetti trigger={showConfetti} />
+      {/* Sidebar */}
+      <aside className="w-80 bg-white border-r border-gray-200 flex flex-col z-20 shadow-xl">
+        <div className="p-6 border-b border-gray-100 bg-white">
+          <div className="flex items-center gap-3 mb-4">
+            <button onClick={handleExitCourse} className="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+              <ion-icon name="arrow-back-outline"></ion-icon>
             </button>
-            <NotificationBell 
-                notifications={notifications}
-                onMarkAsRead={handleMarkNotificationAsRead}
-                onMarkAllAsRead={handleMarkAllNotificationsAsRead}
-            />
-         </header>
-         <div className="p-4 md:p-8 max-w-4xl mx-auto">
-            <div className="bg-black rounded-lg shadow-2xl mb-6 relative overflow-hidden aspect-video">
-               <VideoPlayer 
-                 key={activeLesson.id} 
-                 videoId={activeLesson.videoId}
-                 onLessonComplete={handleLessonComplete}
-               />
+            <h1 className="font-bold text-gray-900 truncate" title={course.title}>{course.title}</h1>
+          </div>
+          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+            <div className="bg-green-500 h-full w-1/3 rounded-full"></div>
+          </div>
+          <p className="text-xs text-gray-500 mt-2 font-medium">33% Completado</p>
+        </div>
+
+        <div className="flex-1 overflow-y-auto custom-scrollbar">
+          {course.modules.map((module, mIndex) => (
+            <div key={module.id} className="border-b border-gray-50">
+              <div className="px-6 py-4 bg-gray-50/50">
+                <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider">{module.title}</h3>
+              </div>
+              <div>
+                {module.lessons.map((lesson, lIndex) => {
+                  const isActive = mIndex === currentModuleIndex && lIndex === currentLessonIndex;
+                  return (
+                    <button
+                      key={lesson.id}
+                      onClick={() => handleLessonSelect(mIndex, lIndex)}
+                      className={`w-full px-6 py-4 flex items-center gap-3 text-left transition-all hover:bg-gray-50 ${isActive ? 'bg-blue-50 border-r-4 border-blue-500' : 'border-transparent'
+                        }`}
+                    >
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border ${isActive ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300 text-gray-400'
+                        }`}>
+                        {isActive ? <ion-icon name="play"></ion-icon> : lIndex + 1}
+                      </div>
+                      <div className="flex-1">
+                        <p className={`text-sm font-medium ${isActive ? 'text-blue-700' : 'text-gray-600'}`}>
+                          {lesson.title}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5 flex items-center gap-1">
+                          <ion-icon name="time-outline"></ion-icon>
+                          {lesson.duration}
+                        </p>
+                      </div>
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-            <LessonContent lesson={activeLesson} />
-         </div>
+          ))}
+        </div>
+      </aside>
+
+      {/* Main Content */}
+      <main className="flex-1 flex flex-col h-full overflow-hidden relative">
+        {/* Tabs Header */}
+        <div className="bg-white border-b border-gray-200 px-8 pt-6">
+          <div className="flex justify-between items-center">
+            <div className="flex gap-8">
+              <button
+                onClick={() => setShowCommunity(false)}
+                className={`pb-4 text-sm font-bold border-b-2 transition-colors ${!showCommunity ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              >
+                Lección Actual
+              </button>
+              <button
+                onClick={() => setShowCommunity(true)}
+                className={`pb-4 text-sm font-bold border-b-2 transition-colors ${showCommunity ? 'border-blue-600 text-blue-600' : 'border-transparent text-gray-500 hover:text-gray-700'}`}
+              >
+                Foro del Curso
+              </button>
+            </div>
+
+            {!showCommunity && currentLesson && (
+              <button
+                onClick={toggleBookmark}
+                className={`p-2 rounded-full transition-colors ${isBookmarked(currentLesson.id) ? 'bg-yellow-100 text-yellow-500' : 'hover:bg-gray-100 text-gray-400'}`}
+                title={isBookmarked(currentLesson.id) ? "Quitar marcador" : "Marcar lección"}
+              >
+                <ion-icon name={isBookmarked(currentLesson.id) ? "bookmark" : "bookmark-outline"} class="text-xl"></ion-icon>
+              </button>
+            )}
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto p-8 custom-scrollbar">
+          <div className="max-w-4xl mx-auto">
+            {showCommunity ? (
+              <CommunityPage courseId={course.id} courseName={course.title} />
+            ) : (
+              currentLesson ? (
+                <>
+                  {showQuiz && currentLesson.quiz ? (
+                    <div className="animate-fade-in">
+                      <button
+                        onClick={() => setShowQuiz(false)}
+                        className="mb-4 flex items-center gap-2 text-gray-500 hover:text-gray-900 transition-colors"
+                      >
+                        <ion-icon name="arrow-back-outline"></ion-icon>
+                        Volver a la lección
+                      </button>
+                      <QuizComponent quiz={currentLesson.quiz} onComplete={handleQuizComplete} />
+                    </div>
+                  ) : (
+                    <div className="animate-fade-in">
+                      <div className="aspect-video bg-black rounded-2xl shadow-2xl overflow-hidden mb-8 ring-1 ring-gray-900/5">
+                        <iframe
+                          width="100%"
+                          height="100%"
+                          src={`https://www.youtube.com/embed/${currentLesson.videoId}`}
+                          title={currentLesson.title}
+                          frameBorder="0"
+                          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                          allowFullScreen
+                        ></iframe>
+                      </div>
+
+                      <div className="flex justify-between items-start mb-6">
+                        <div>
+                          <h1 className="text-3xl font-bold text-gray-900 mb-2">{currentLesson.title}</h1>
+                          <p className="text-gray-600 text-lg leading-relaxed">{currentLesson.description}</p>
+                        </div>
+
+                        {currentLesson.quiz && (
+                          <button
+                            onClick={() => setShowQuiz(true)}
+                            className="flex items-center gap-2 px-6 py-3 bg-gradient-to-r from-purple-600 to-blue-600 text-white rounded-xl font-bold shadow-lg shadow-purple-500/30 hover:shadow-purple-500/50 transform hover:-translate-y-0.5 transition-all"
+                          >
+                            <ion-icon name="school-outline" class="text-xl"></ion-icon>
+                            Tomar Quiz
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  )}
+                </>
+              ) : (
+                <div className="flex items-center justify-center h-full text-gray-500">
+                  Selecciona una lección para comenzar
+                </div>
+              )
+            )}
+          </div>
+        </div>
       </main>
     </div>
   );

@@ -12,54 +12,70 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onSelectCourse }) => {
             case 'active':
                 return {
                     buttonText: 'Continuar',
-                    buttonClass: 'iaev-blue hover:opacity-90',
-                    badgeClass: 'bg-blue-100 text-iaev-blue',
-                    badgeText: 'Activo'
+                    buttonClass: 'bg-gradient-to-r from-blue-600 to-blue-500 text-white shadow-blue-200',
+                    badgeClass: 'bg-blue-50 text-blue-600 border-blue-100',
+                    badgeText: 'En Progreso'
                 };
             case 'completed':
                 return {
-                    buttonText: 'Ver de Nuevo',
-                    buttonClass: 'bg-gray-600 hover:bg-gray-500',
-                    badgeClass: 'bg-green-100 text-iaev-green',
-                    badgeText: 'Finalizado'
+                    buttonText: 'Repasar',
+                    buttonClass: 'bg-white border-2 border-gray-200 text-gray-700 hover:border-gray-300 hover:bg-gray-50',
+                    badgeClass: 'bg-green-50 text-green-600 border-green-100',
+                    badgeText: 'Completado'
                 };
             case 'new':
             default:
                 return {
-                    buttonText: 'Empezar Curso',
-                    buttonClass: 'iaev-blue hover:opacity-90',
-                    badgeClass: 'bg-yellow-100 text-iaev-yellow',
+                    buttonText: 'Empezar Ahora',
+                    buttonClass: 'bg-gray-900 text-white shadow-gray-200',
+                    badgeClass: 'bg-yellow-50 text-yellow-600 border-yellow-100',
                     badgeText: 'Nuevo'
                 };
         }
     };
-    
+
     const { buttonText, buttonClass, badgeClass, badgeText } = getStatusStyles();
 
     return (
-        <div className="bg-white rounded-lg overflow-hidden flex flex-col h-full shadow-md border border-gray-200 hover:shadow-xl transition-shadow duration-300">
-            <div className="p-6 flex-grow">
-                <div className="flex justify-between items-start mb-2">
-                    <h3 className="text-lg font-bold text-gray-800">{course.title}</h3>
-                    <span className={`px-2 py-1 text-xs font-semibold rounded-full ${badgeClass}`}>{badgeText}</span>
+        <div
+            className="group bg-white rounded-2xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100"
+        >
+            <div className="p-8 flex-grow relative">
+                <div className="absolute top-0 right-0 p-6">
+                    <span className={`px-3 py-1 text-xs font-bold rounded-full border ${badgeClass}`}>
+                        {badgeText}
+                    </span>
                 </div>
-                <p className="text-sm text-gray-500 mb-4">{course.subtitle}</p>
+
+                <div className="mt-4 mb-4">
+                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight">
+                        {course.title}
+                    </h3>
+                    <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                        {course.subtitle}
+                    </p>
+                </div>
             </div>
-            <div className="px-6 pb-6 bg-gray-50/50">
+
+            <div className="px-8 pb-8 pt-0">
                 {course.progress > 0 && (
-                    <div className="mb-4">
-                        <div className="flex justify-between text-xs text-gray-500 mb-1">
-                            <span>Progreso</span>
-                            <span>{course.progress}%</span>
+                    <div className="mb-6">
+                        <div className="flex justify-between text-xs font-medium text-gray-500 mb-2">
+                            <span>Tu progreso</span>
+                            <span className="text-gray-900">{course.progress}%</span>
                         </div>
-                        <div className="w-full bg-gray-200 rounded-full h-2">
-                            <div className="iaev-green h-2 rounded-full" style={{ width: `${course.progress}%` }}></div>
+                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                            <div
+                                className="bg-gradient-to-r from-blue-500 to-cyan-400 h-2 rounded-full transition-all duration-1000 ease-out"
+                                style={{ width: `${course.progress}%` }}
+                            ></div>
                         </div>
                     </div>
                 )}
-                <button 
+
+                <button
                     onClick={() => onSelectCourse(course.id)}
-                    className={`w-full text-white font-bold py-2 px-4 rounded-lg transition-opacity duration-200 ${buttonClass}`}
+                    className={`w-full font-bold py-3.5 px-6 rounded-xl transition-all duration-200 shadow-lg hover:shadow-md active:scale-[0.98] ${buttonClass}`}
                 >
                     {buttonText}
                 </button>
