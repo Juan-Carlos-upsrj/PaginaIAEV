@@ -1,108 +1,53 @@
 <!DOCTYPE html>
 <html lang="en">
-
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Plataforma de Cursos Online</title>
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Inter', 'sans-serif'],
-          },
-        }
-      }
-    }
-  </script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
-  <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
-  <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-
-  <style>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Plataforma de Cursos Online</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+  <script type="importmap">
+{
+  "imports": {
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0"
+  }
+}
+</script>
+<style>
     body {
-      font-family: 'Inter', sans-serif;
-      background-color: #f3f4f6;
-      color: #1f2937;
-      transition: background-color 0.3s ease;
-      min-height: 100vh;
+        font-family: 'Inter', sans-serif;
     }
-
-    .dark body {
-      background-color: #111827;
-      color: #f3f4f6;
-    }
-
-    .glass {
-      background: rgba(255, 255, 255, 0.7);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.5);
-    }
-
-    .glass-dark {
-      background: rgba(17, 24, 39, 0.8);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.1);
-    }
-
-    /* Colores personalizados para emular el logo y el estilo de la imagen */
-    .iaev-blue {
-      background-color: #2F80ED;
-    }
-
-    .iaev-green {
-      background-color: #27AE60;
-    }
-
-    .iaev-yellow {
-      background-color: #F2C94C;
-    }
-
-    .iaev-red {
-      background-color: #EB5757;
-    }
-
-    .text-iaev-blue {
-      color: #2F80ED;
-    }
-
-    .text-iaev-green {
-      color: #27AE60;
-    }
-
-    .text-iaev-yellow {
-      color: #F2C94C;
-    }
-
-    .text-iaev-red {
-      color: #EB5757;
-    }
+     /* Colores personalizados para emular el logo y el estilo de la imagen */
+    .iaev-blue { background-color: #2F80ED; } /* Azul del logo */
+    .iaev-green { background-color: #27AE60; } /* Verde del logo */
+    .iaev-yellow { background-color: #F2C94C; } /* Amarillo del logo */
+    .iaev-red { background-color: #EB5757; }   /* Rojo del logo */
+    
+    .text-iaev-blue { color: #2F80ED; }
+    .text-iaev-green { color: #27AE60; }
+    .text-iaev-yellow { color: #F2C94C; }
+    .text-iaev-red { color: #EB5757; }
 
     .sidebar-item.active {
-      background-color: rgba(47, 128, 237, 0.1);
-      color: #2F80ED;
-      font-weight: 600;
-      border-right: 3px solid #2F80ED;
+        background-color: #e3f2fd; /* light blue */
+        color: #2F80ED; /* iaev-blue */
+        font-weight: 600;
     }
-
     .sidebar-item.locked {
-      opacity: 0.6;
-      cursor: not-allowed;
-      background-color: rgba(248, 249, 250, 0.5);
+        opacity: 0.6;
+        cursor: not-allowed;
+        background-color: #f8f9fa; /* gray-50 */
     }
-  </style>
+</style>
 </head>
-
-<body>
-  <div id="root"></div>
-  <script type="module" src="/index.tsx"></script>
-</body>
-
+  <body class="bg-gray-50">
+    <div id="root"></div>
+    <script type="module" src="/index.tsx"></script>
+  </body>
 </html>

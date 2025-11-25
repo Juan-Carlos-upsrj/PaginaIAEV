@@ -1,113 +1,77 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useUser } from '../context/UserContext';
+import React from 'react';
 
-const LoginPage: React.FC = () => {
-    const navigate = useNavigate();
-    const { login } = useUser();
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
-    const [name, setName] = useState('');
-    const [isRegistering, setIsRegistering] = useState(false);
+interface LoginPageProps {
+    onLogin: () => void;
+}
 
+const Logo: React.FC = () => (
+    <div className="flex justify-center mb-6">
+        <span className="text-4xl font-extrabold flex">
+            <span className="text-iaev-blue">I</span>
+            <span className="text-iaev-yellow">A</span>
+            <span className="text-iaev-green">E</span>
+            <span className="text-iaev-red">V</span>
+            <span className="text-gray-800 ml-2">SITE</span>
+        </span>
+    </div>
+);
+
+
+const LoginPage: React.FC<LoginPageProps> = ({ onLogin }) => {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-
-        // Simple validation
-        if (!email || !password) return alert('Por favor completa todos los campos');
-        if (isRegistering && !name) return alert('Por favor ingresa tu nombre');
-
-        // Simulate login/register
-        const userName = name || email.split('@')[0];
-        login(email, userName);
-
-        // Redirect based on role
-        const isStudent = /^\d/.test(email);
-        if (isStudent) {
-            navigate('/dashboard');
-        } else {
-            navigate('/admin');
-        }
+        onLogin();
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-800">
-            <div className="bg-white/80 dark:bg-gray-800/80 backdrop-blur-xl p-8 rounded-2xl shadow-2xl w-full max-w-md border border-white/50 dark:border-gray-700 relative overflow-hidden">
-                {/* Decorative Elements */}
-                <div className="absolute -top-20 -right-20 w-40 h-40 bg-purple-500/20 rounded-full blur-3xl"></div>
-                <div className="absolute -bottom-20 -left-20 w-40 h-40 bg-blue-500/20 rounded-full blur-3xl"></div>
-
-                <div className="relative z-10">
-                    <div className="text-center mb-8">
-                        <div className="mb-6 transform hover:scale-105 transition-transform duration-300 inline-block">
-                            <span className="text-5xl font-extrabold flex tracking-tight drop-shadow-sm">
-                                <span className="text-blue-600">I</span>
-                                <span className="text-yellow-500">A</span>
-                                <span className="text-green-500">E</span>
-                                <span className="text-red-500">V</span>
-                                <span className="text-gray-800 dark:text-white ml-2">SITE</span>
-                            </span>
+        <div className="flex items-center justify-center min-h-screen bg-gray-50">
+            <div className="w-full max-w-sm p-8 space-y-6 bg-white rounded-xl shadow-lg border border-gray-200">
+                <Logo />
+                <div>
+                    <h2 className="text-center text-2xl font-bold text-gray-900">
+                        Iniciar Sesión
+                    </h2>
+                    <p className="mt-2 text-center text-sm text-gray-600">
+                        Bienvenido a la plataforma de aprendizaje
+                    </p>
+                </div>
+                <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+                    <div className="space-y-4">
+                        <div>
+                            <label htmlFor="email-address" className="sr-only">Correo electrónico</label>
+                            <input
+                                id="email-address"
+                                name="email"
+                                type="email"
+                                autoComplete="email"
+                                required
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Correo electrónico (demo@mail.com)"
+                            />
                         </div>
-                        <h1 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">Bienvenido</h1>
-                        <p className="text-gray-500 dark:text-gray-400 font-medium">Ingresa tus credenciales para continuar</p>
+                        <div>
+                            <label htmlFor="password" className="sr-only">Contraseña</label>
+                            <input
+                                id="password"
+                                name="password"
+                                type="password"
+                                autoComplete="current-password"
+                                required
+                                className="appearance-none relative block w-full px-3 py-2 border border-gray-300 placeholder-gray-500 text-gray-900 rounded-md focus:outline-none focus:ring-blue-500 focus:border-blue-500 sm:text-sm"
+                                placeholder="Contraseña (cualquiera)"
+                            />
+                        </div>
                     </div>
 
-                    <form onSubmit={handleSubmit} className="space-y-6">
-                        {isRegistering && (
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre Completo</label>
-                                <input
-                                    type="text"
-                                    value={name}
-                                    onChange={(e) => setName(e.target.value)}
-                                    className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                    placeholder="Tu nombre"
-                                />
-                            </div>
-                        )}
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Correo Institucional</label>
-                            <input
-                                type="email"
-                                value={email}
-                                onChange={(e) => setEmail(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                placeholder="ej. 0000123@alumno.iaev.mx"
-                            />
-                            <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                                Alumnos: Usar matrícula (ej. 0000...) | Docentes: Usar correo (ej. nombre@...)
-                            </p>
-                        </div>
-
-                        <div>
-                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contraseña</label>
-                            <input
-                                type="password"
-                                value={password}
-                                onChange={(e) => setPassword(e.target.value)}
-                                className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                                placeholder="••••••••"
-                            />
-                        </div>
-
+                    <div>
                         <button
                             type="submit"
-                            className="w-full py-3 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-bold rounded-xl shadow-lg hover:shadow-blue-500/30 transform hover:-translate-y-0.5 transition-all"
+                            className="group relative w-full flex justify-center py-2 px-4 border border-transparent text-sm font-medium rounded-md text-white iaev-blue hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-opacity"
                         >
-                            {isRegistering ? 'Crear Cuenta' : 'Iniciar Sesión'}
-                        </button>
-                    </form>
-
-                    <div className="mt-6 text-center">
-                        <button
-                            onClick={() => setIsRegistering(!isRegistering)}
-                            className="text-sm text-blue-600 dark:text-blue-400 hover:underline transition-colors"
-                        >
-                            {isRegistering ? '¿Ya tienes cuenta? Inicia sesión' : '¿No tienes cuenta? Regístrate'}
+                            Entrar
                         </button>
                     </div>
-                </div>
+                </form>
             </div>
         </div>
     );
