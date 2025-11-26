@@ -1,0 +1,65 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Styles from index.html */
+@layer base {
+    body {
+        @apply font-sans bg-gray-100 text-gray-800 transition-colors duration-300 min-h-screen;
+    }
+
+    .dark body {
+        @apply bg-gray-900 text-gray-100;
+    }
+}
+
+@layer components {
+    .glass {
+        @apply bg-white/70 backdrop-blur-md border border-white/50;
+    }
+
+    .glass-dark {
+        @apply bg-gray-900/80 backdrop-blur-md border border-white/10;
+    }
+
+    /* IAEV Colors */
+    .iaev-blue {
+        @apply bg-[#2F80ED];
+    }
+
+    .iaev-green {
+        @apply bg-[#27AE60];
+    }
+
+    .iaev-yellow {
+        @apply bg-[#F2C94C];
+    }
+
+    .iaev-red {
+        @apply bg-[#EB5757];
+    }
+
+    .text-iaev-blue {
+        @apply text-[#2F80ED];
+    }
+
+    .text-iaev-green {
+        @apply text-[#27AE60];
+    }
+
+    .text-iaev-yellow {
+        @apply text-[#F2C94C];
+    }
+
+    .text-iaev-red {
+        @apply text-[#EB5757];
+    }
+
+    .sidebar-item.active {
+        @apply bg-[#2F80ED]/10 text-[#2F80ED] font-semibold border-r-[3px] border-[#2F80ED];
+    }
+
+    .sidebar-item.locked {
+        @apply opacity-60 cursor-not-allowed bg-gray-50/50;
+    }
+}

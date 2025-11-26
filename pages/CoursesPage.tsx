@@ -11,7 +11,7 @@ const CoursesPage: React.FC = () => {
 
     const categories = ['Todos', 'Programación', 'Diseño', '3D', 'Data Science'];
 
-    const filteredCourses = (summaries || []).filter(course => {
+    const filteredCourses = React.useMemo(() => (summaries || []).filter(course => {
         const matchesSearch = course.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
             course.subtitle.toLowerCase().includes(searchTerm.toLowerCase());
         // Mock category filtering since we don't have categories in the data yet
@@ -19,22 +19,22 @@ const CoursesPage: React.FC = () => {
         const matchesCategory = selectedCategory === 'Todos' || true;
 
         return matchesSearch && matchesCategory;
-    });
+    }), [summaries, searchTerm, selectedCategory]);
 
-    const handleSelectCourse = (id: number) => {
+    const handleSelectCourse = React.useCallback((id: number) => {
         navigate(`/course/${id}`);
-    };
+    }, [navigate]);
 
     return (
         <div className="min-h-screen bg-transparent pb-20">
-            <header className="sticky top-4 z-50 mx-4 mb-8 rounded-2xl glass shadow-sm">
+            <header className="sticky top-4 z-50 mx-4 mb-8 rounded-2xl glass dark:glass-dark shadow-sm border border-white/50 dark:border-white/10">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-20">
                         <div className="flex items-center gap-4">
-                            <a href="/dashboard" className="p-2 rounded-xl hover:bg-blue-50 text-blue-600 transition-colors">
+                            <a href="/dashboard" className="p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/30 text-blue-600 dark:text-blue-400 transition-colors">
                                 <ion-icon name="arrow-back-outline" class="w-6 h-6"></ion-icon>
                             </a>
-                            <h1 className="text-2xl font-bold text-gray-800">Catálogo de Cursos</h1>
+                            <h1 className="text-2xl font-bold text-gray-800 dark:text-white">Catálogo de Cursos</h1>
                         </div>
 
                         <div className="relative hidden md:block">
@@ -44,7 +44,7 @@ const CoursesPage: React.FC = () => {
                                 placeholder="Buscar cursos..."
                                 value={searchTerm}
                                 onChange={(e) => setSearchTerm(e.target.value)}
-                                className="pl-10 pr-4 py-2 bg-white/50 border border-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm w-64"
+                                className="pl-10 pr-4 py-2 bg-white/50 dark:bg-gray-800/50 border border-white/60 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-sm w-64 text-gray-900 dark:text-white placeholder-gray-500"
                             />
                         </div>
                     </div>
@@ -53,6 +53,7 @@ const CoursesPage: React.FC = () => {
 
             <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                 {/* Categories */}
+                {/* Categories */}
                 <div className="flex gap-2 overflow-x-auto pb-6 mb-6 custom-scrollbar">
                     {categories.map(category => (
                         <button
@@ -60,7 +61,7 @@ const CoursesPage: React.FC = () => {
                             onClick={() => setSelectedCategory(category)}
                             className={`px-4 py-2 rounded-xl text-sm font-medium whitespace-nowrap transition-all ${selectedCategory === category
                                 ? 'bg-blue-600 text-white shadow-lg shadow-blue-600/20'
-                                : 'bg-white/50 text-gray-600 hover:bg-white hover:text-blue-600'
+                                : 'bg-white/50 dark:bg-gray-800/50 text-gray-600 dark:text-gray-300 hover:bg-white dark:hover:bg-gray-800 hover:text-blue-600 dark:hover:text-blue-400'
                                 }`}
                         >
                             {category}
@@ -76,7 +77,7 @@ const CoursesPage: React.FC = () => {
                         placeholder="Buscar cursos..."
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        className="w-full pl-10 pr-4 py-3 bg-white/50 border border-white/60 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50"
+                        className="w-full pl-10 pr-4 py-3 bg-white/50 dark:bg-gray-800/50 border border-white/60 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500/50 text-gray-900 dark:text-white placeholder-gray-500"
                     />
                 </div>
 
@@ -88,12 +89,12 @@ const CoursesPage: React.FC = () => {
                         ))}
                     </div>
                 ) : (
-                    <div className="text-center py-20 glass rounded-2xl">
-                        <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+                    <div className="text-center py-20 glass dark:glass-dark rounded-2xl border border-white/50 dark:border-white/10">
+                        <div className="w-16 h-16 bg-gray-100 dark:bg-gray-800 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
                             <ion-icon name="search-outline" class="w-8 h-8"></ion-icon>
                         </div>
-                        <h3 className="text-lg font-medium text-gray-800">No se encontraron cursos</h3>
-                        <p className="text-gray-500 mt-1">Intenta con otros términos de búsqueda.</p>
+                        <h3 className="text-lg font-medium text-gray-800 dark:text-white">No se encontraron cursos</h3>
+                        <p className="text-gray-500 dark:text-gray-400 mt-1">Intenta con otros términos de búsqueda.</p>
                     </div>
                 )}
             </main>

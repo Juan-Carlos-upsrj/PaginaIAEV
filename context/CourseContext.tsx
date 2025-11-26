@@ -1,6 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useEffect } from 'react';
 import { dashboardCourses, courseData as initialCourseData } from '../data/courses';
 import type { Course, CourseSummary } from '../types';
+import { useLocalStorage } from '../hooks/useLocalStorage';
+import { useUser } from './UserContext';
 
 interface CourseContextType {
     courses: Course[];
@@ -13,68 +15,65 @@ interface CourseContextType {
 
 const CourseContext = createContext<CourseContextType | undefined>(undefined);
 
-export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [courses, setCourses] = useState<Course[]>([]);
-    const [summaries, setSummaries] = useState<CourseSummary[]>([]);
+// Helper component to handle progress updates
+// We put this in a separate component to keep the Provider clean and separation of concerns
+const CourseProgressUpdater: React.FC<{
+    courses: Course[];
+    setSummaries: (value: CourseSummary[] | ((val: CourseSummary[]) => CourseSummary[])) => void;
+}> = ({ courses, setSummaries }) => {
+    const { user } = useUser();
 
-    // Load initial data from localStorage or fall back to static data
     useEffect(() => {
-        try {
-            const savedCourses = localStorage.getItem('iaev_courses');
-            const savedSummaries = localStorage.getItem('iaev_summaries');
+        if (!user) return;
 
-            if (savedCourses && savedSummaries) {
-                const parsedCourses = JSON.parse(savedCourses);
-                const parsedSummaries = JSON.parse(savedSummaries);
+        setSummaries(prevSummaries => {
+            let hasChanges = false;
+            const newSummaries = prevSummaries.map(summary => {
+                const course = courses.find(c => c.id === summary.id);
+                if (!course) return summary;
 
-                // Merge: Add any new courses from static data that aren't in localStorage
-                const existingIds = new Set(parsedCourses.map((c: Course) => c.id));
-                const newCourses = initialCourseData.filter(c => !existingIds.has(c.id));
+                const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+                if (totalLessons === 0) return summary;
 
-                // Safeguard: Ensure dashboardCourses is defined before filtering
-                const safeDashboardCourses = dashboardCourses || [];
-                const newSummaries = safeDashboardCourses.filter(s => !existingIds.has(s.id));
+                const completedInCourse = course.modules
+                    .flatMap(m => m.lessons)
+                    .filter(l => user.completedLessons.includes(l.id))
+                    .length;
 
-                if (newCourses.length > 0) {
-                    const mergedCourses = [...parsedCourses, ...newCourses];
-                    const mergedSummaries = [...parsedSummaries, ...newSummaries];
-                    setCourses(mergedCourses);
-                    setSummaries(mergedSummaries);
-                    localStorage.setItem('iaev_courses', JSON.stringify(mergedCourses));
-                    localStorage.setItem('iaev_summaries', JSON.stringify(mergedSummaries));
-                } else {
-                    setCourses(parsedCourses);
-                    setSummaries(parsedSummaries);
+                const newProgress = Math.round((completedInCourse / totalLessons) * 100);
+                const newStatus = newProgress === 100 ? 'completed' : newProgress > 0 ? 'active' : 'new';
+
+                if (summary.progress !== newProgress || summary.status !== newStatus) {
+                    hasChanges = true;
+                    return { ...summary, progress: newProgress, status: newStatus };
                 }
-            } else {
-                // Initialize with static data
-                setCourses(initialCourseData);
-                // Safeguard: Ensure dashboardCourses is defined
-                setSummaries(dashboardCourses || []);
-                // Save immediately to persist for future
-                localStorage.setItem('iaev_courses', JSON.stringify(initialCourseData));
-                localStorage.setItem('iaev_summaries', JSON.stringify(dashboardCourses || []));
-            }
-        } catch (error) {
-            console.error("Error loading course data:", error);
-            // Fallback to initial data in case of error
-            setCourses(initialCourseData);
-            setSummaries(dashboardCourses || []);
-        }
-    }, []);
+                return summary;
+            });
 
-    // Save to localStorage whenever state changes
-    useEffect(() => {
-        if (courses.length > 0) {
-            localStorage.setItem('iaev_courses', JSON.stringify(courses));
-        }
-    }, [courses]);
+            return hasChanges ? newSummaries : prevSummaries;
+        });
+    }, [user?.completedLessons, courses, setSummaries]);
 
+    return null;
+};
+
+export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const [courses, setCourses] = useLocalStorage<Course[]>('iaev_courses', initialCourseData);
+    const [summaries, setSummaries] = useLocalStorage<CourseSummary[]>('iaev_summaries', dashboardCourses || []);
+
+    // Merge new static data if needed
     useEffect(() => {
-        if (summaries.length > 0) {
-            localStorage.setItem('iaev_summaries', JSON.stringify(summaries));
+        const existingIds = new Set(courses.map(c => c.id));
+        const newCourses = initialCourseData.filter(c => !existingIds.has(c.id));
+
+        const safeDashboardCourses = dashboardCourses || [];
+        const newSummaries = safeDashboardCourses.filter(s => !existingIds.has(s.id));
+
+        if (newCourses.length > 0) {
+            setCourses(prev => [...prev, ...newCourses]);
+            setSummaries(prev => [...prev, ...newSummaries]);
         }
-    }, [summaries]);
+    }, []); // Run once on mount
 
     const addCourse = (newCourse: Course) => {
         const newSummary: CourseSummary = {
@@ -116,6 +115,7 @@ export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ childr
 
     return (
         <CourseContext.Provider value={{ courses, summaries, addCourse, updateCourse, deleteCourse, getCourse }}>
+            <CourseProgressUpdater courses={courses} setSummaries={setSummaries} />
             {children}
         </CourseContext.Provider>
     );

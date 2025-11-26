@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { useUser } from './UserContext';
 
 export interface Subject {
     id: string;
@@ -74,9 +75,26 @@ const initialCurriculum: Quarter[] = [
 ];
 
 export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+    const { user } = useUser();
     const [quarters, setQuarters] = useState<Quarter[]>(initialCurriculum);
     const [gpa, setGpa] = useState(0);
     const [progress, setProgress] = useState(0);
+
+    // Load curriculum based on user profile
+    useEffect(() => {
+        if (user) {
+            // Dynamic import to avoid circular dependencies if any, though here it's fine
+            import('../data/mockProfiles').then(({ MOCK_PROFILES }) => {
+                const mockProfile = MOCK_PROFILES.find(p => p.id === user.id);
+                if (mockProfile) {
+                    setQuarters(mockProfile.curriculum);
+                } else {
+                    // Reset to default if not a mock profile (or load from real backend in future)
+                    setQuarters(initialCurriculum);
+                }
+            });
+        }
+    }, [user]);
 
     useEffect(() => {
         // Calculate GPA

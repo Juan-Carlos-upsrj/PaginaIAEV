@@ -1,5 +1,6 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext } from 'react';
 import type { UserProfile, Achievement } from '../types';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface UserContextType {
     user: UserProfile | null;
@@ -8,6 +9,9 @@ interface UserContextType {
     addXp: (amount: number) => void;
     completeLesson: (lessonId: number) => void;
     completeQuiz: (quizId: number, score: number) => void;
+    assignCourse: (courseId: number) => void;
+    updateProfile: (data: Partial<UserProfile>) => void;
+    switchProfile: (profileId: string) => void;
 }
 
 const AVAILABLE_ACHIEVEMENTS: Achievement[] = [
@@ -19,41 +23,39 @@ const AVAILABLE_ACHIEVEMENTS: Achievement[] = [
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser] = useState<UserProfile | null>(() => {
-        const saved = localStorage.getItem('iaev_user');
-        return saved ? JSON.parse(saved) : null;
-    });
-
-    useEffect(() => {
-        if (user) {
-            localStorage.setItem('iaev_user', JSON.stringify(user));
-        } else {
-            localStorage.removeItem('iaev_user');
-        }
-    }, [user]);
+    const [user, setUser, removeUser] = useLocalStorage<UserProfile | null>('iaev_user', null);
 
     const login = (email: string, name: string) => {
-        // Determine role based on email
-        // Student: starts with numbers (e.g., 0000120120@...)
-        // Teacher: starts with letters (e.g., jsalgado@...)
-        const isStudent = /^\d/.test(email);
-        const role = isStudent ? 'student' : 'teacher';
+        // Determine role based on env var allowlist
+        const adminEmails = import.meta.env.VITE_ADMIN_EMAILS?.split(',') || [];
+        // Fallback for dev/demo if env not set, though ideally should be in .env
+        const defaultAdmins = ['admin@iaev.mx', 'profesor@iaev.mx'];
+        const allAdmins = [...adminEmails, ...defaultAdmins];
+
+        const isTeacher = allAdmins.some(admin => admin.trim().toLowerCase() === email.toLowerCase());
+        const role = isTeacher ? 'teacher' : 'student';
+
+        // Generate a simple ID based on email
+        const id = email.toLowerCase().replace(/[^a-z0-9]/g, '');
 
         const newUser: UserProfile = {
+            id,
             name,
             email,
             role,
             xp: 0,
             level: 1,
+            cuatrimestre: 1, // Default to 1st cuatrimestre
             achievements: [],
             completedLessons: [],
-            completedQuizzes: []
+            completedQuizzes: [],
+            assignedCourses: []
         };
         setUser(newUser);
     };
 
     const logout = () => {
-        setUser(null);
+        removeUser();
     };
 
     const checkAchievements = (currentUser: UserProfile) => {
@@ -140,8 +142,42 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     };
 
+    const assignCourse = (courseId: number) => {
+        if (!user) return;
+        setUser(prev => {
+            if (!prev) return null;
+            if (prev.assignedCourses?.includes(courseId)) return prev;
+
+            return {
+                ...prev,
+                assignedCourses: [...(prev.assignedCourses || []), courseId]
+            };
+        });
+    };
+
+    const updateProfile = (data: Partial<UserProfile>) => {
+        if (!user) return;
+        setUser(prev => {
+            if (!prev) return null;
+            return { ...prev, ...data };
+        });
+    };
+
+    const switchProfile = async (profileId: string) => {
+        // Dynamic import to avoid circular dependencies
+        const { MOCK_PROFILES } = await import('../data/mockProfiles');
+        const mockProfile = MOCK_PROFILES.find(p => p.id === profileId);
+
+        if (mockProfile) {
+            setUser(mockProfile.user);
+            // Force reload to ensure all contexts update (simple way to reset state)
+            // In a real app we might want to reset contexts more gracefully
+            window.location.reload();
+        }
+    };
+
     return (
-        <UserContext.Provider value={{ user, login, logout, addXp, completeLesson, completeQuiz }}>
+        <UserContext.Provider value={{ user, login, logout, addXp, completeLesson, completeQuiz, assignCourse, updateProfile, switchProfile }}>
             {children}
         </UserContext.Provider>
     );

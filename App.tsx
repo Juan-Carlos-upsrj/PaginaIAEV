@@ -1,90 +1,96 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { UserProvider, useUser } from './context/UserContext';
 import { CourseProvider } from './context/CourseContext';
 import { AcademicProvider } from './context/AcademicContext';
 import { BookmarkProvider } from './context/BookmarkContext';
-import LoginPage from './pages/LoginPage';
-import DashboardPage from './pages/DashboardPage';
-import CoursePage from './pages/CoursePage';
-import CommunityPage from './pages/CommunityPage';
-import CoursesPage from './pages/CoursesPage';
-import CalendarPage from './pages/CalendarPage';
-import KardexPage from './pages/KardexPage';
-import BookmarksPage from './pages/BookmarksPage';
-import CertificatePage from './pages/CertificatePage';
+import { generateCSRFToken } from './utils/csrf';
+
+// Layouts
 import AdminLayout from './layouts/AdminLayout';
-import AdminDashboard from './pages/admin/AdminDashboard';
-import CourseEditor from './pages/admin/CourseEditor';
-import StudentsPage from './pages/admin/StudentsPage';
-import AnalyticsPage from './pages/admin/AnalyticsPage';
+import ProtectedRoute from './components/ProtectedRoute';
+
+// Lazy Loaded Pages
+const LoginPage = React.lazy(() => import('./pages/LoginPage'));
+const DashboardPage = React.lazy(() => import('./pages/DashboardPage'));
+const CoursesPage = React.lazy(() => import('./pages/CoursesPage'));
+const CourseIntroPage = React.lazy(() => import('./pages/CourseIntroPage'));
+const CoursePage = React.lazy(() => import('./pages/CoursePage'));
+const CommunityPage = React.lazy(() => import('./pages/CommunityPage'));
+const BookmarksPage = React.lazy(() => import('./pages/BookmarksPage'));
+const CalendarPage = React.lazy(() => import('./pages/CalendarPage'));
+const KardexPage = React.lazy(() => import('./pages/KardexPage'));
+const CertificatePage = React.lazy(() => import('./pages/CertificatePage'));
+const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
+
+// Lazy Loaded Admin Pages
+const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
+const CourseEditor = React.lazy(() => import('./pages/admin/CourseEditor'));
+const StudentsPage = React.lazy(() => import('./pages/admin/StudentsPage'));
+const AnalyticsPage = React.lazy(() => import('./pages/admin/AnalyticsPage'));
+
+// Loading Component
+const PageLoader = () => (
+  <div className="min-h-screen flex items-center justify-center bg-gray-50">
+    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+  </div>
+);
 
 const AppRoutes: React.FC = () => {
   const { user } = useUser();
+
   const isAuthenticated = !!user;
   const isTeacher = user?.role === 'teacher';
 
   return (
-    <Routes>
-      <Route path="/login" element={
-        !isAuthenticated ? <LoginPage /> : <Navigate to={isTeacher ? "/admin" : "/dashboard"} />
-      } />
+    <React.Suspense fallback={<PageLoader />}>
+      <Routes>
+        <Route path="/login" element={!isAuthenticated ? <LoginPage /> : <Navigate to={isTeacher ? "/admin" : "/dashboard"} />} />
 
-      <Route path="/dashboard" element={
-        isAuthenticated ? <DashboardPage /> : <Navigate to="/login" />
-      } />
+        {/* Student Routes */}
+        <Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+        <Route path="/courses" element={<ProtectedRoute><CoursesPage /></ProtectedRoute>} />
 
-      <Route path="/community" element={
-        isAuthenticated ? <CommunityPage /> : <Navigate to="/login" />
-      } />
+        {/* Course Flow */}
+        <Route path="/course/:courseId" element={<ProtectedRoute requireCourse><CourseIntroPage /></ProtectedRoute>} />
+        <Route path="/course/:courseId/learn" element={<ProtectedRoute requireCourse><CoursePage /></ProtectedRoute>} />
 
-      <Route path="/courses" element={
-        isAuthenticated ? <CoursesPage /> : <Navigate to="/login" />
-      } />
+        <Route path="/community" element={<ProtectedRoute><CommunityPage /></ProtectedRoute>} />
+        <Route path="/bookmarks" element={<ProtectedRoute><BookmarksPage /></ProtectedRoute>} />
+        <Route path="/calendar" element={<ProtectedRoute><CalendarPage /></ProtectedRoute>} />
+        <Route path="/kardex" element={<ProtectedRoute><KardexPage /></ProtectedRoute>} />
+        <Route path="/certificate/:courseId" element={<ProtectedRoute requireCourse><CertificatePage /></ProtectedRoute>} />
+        <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
-      <Route path="/calendar" element={
-        isAuthenticated ? <CalendarPage /> : <Navigate to="/login" />
-      } />
+        {/* Admin Routes */}
+        <Route path="/admin" element={isAuthenticated && isTeacher ? <AdminLayout /> : <Navigate to="/login" />}>
+          <Route index element={<AdminDashboard />} />
+          <Route path="course/new" element={<CourseEditor />} />
+          <Route path="course/:courseId" element={<CourseEditor />} />
+          <Route path="students" element={<StudentsPage />} />
+          <Route path="analytics" element={<AnalyticsPage />} />
+        </Route>
 
-      <Route path="/kardex" element={
-        isAuthenticated ? <KardexPage /> : <Navigate to="/login" />
-      } />
-
-      <Route path="/bookmarks" element={
-        isAuthenticated ? <BookmarksPage /> : <Navigate to="/login" />
-      } />
-
-      <Route path="/course/:courseId" element={
-        isAuthenticated ? <CoursePage /> : <Navigate to="/login" />
-      } />
-
-      <Route path="/certificate/:courseId" element={
-        isAuthenticated ? <CertificatePage /> : <Navigate to="/login" />
-      } />
-
-      {/* Admin Routes - Protected by Role */}
-      <Route path="/admin" element={
-        isAuthenticated && isTeacher ? <AdminLayout /> : <Navigate to={isAuthenticated ? "/dashboard" : "/login"} />
-      }>
-        <Route index element={<AdminDashboard />} />
-        <Route path="course/new" element={<CourseEditor />} />
-        <Route path="course/:courseId" element={<CourseEditor />} />
-        <Route path="students" element={<StudentsPage />} />
-        <Route path="analytics" element={<AnalyticsPage />} />
-      </Route>
-
-      <Route path="/" element={<Navigate to={isAuthenticated ? (isTeacher ? "/admin" : "/dashboard") : "/login"} />} />
-    </Routes>
+        {/* Default Redirect */}
+        <Route path="/" element={<Navigate to={isAuthenticated ? (isTeacher ? "/admin" : "/dashboard") : "/login"} />} />
+        <Route path="*" element={<Navigate to="/" />} />
+      </Routes>
+    </React.Suspense>
   );
 };
 
 const App: React.FC = () => {
+  useEffect(() => {
+    generateCSRFToken();
+
+  }, []);
+
   return (
     <UserProvider>
       <CourseProvider>
         <AcademicProvider>
           <BookmarkProvider>
-            <Router>
+            <Router basename="/iaev">
               <AppRoutes />
             </Router>
           </BookmarkProvider>

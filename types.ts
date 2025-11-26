@@ -31,6 +31,27 @@ export interface Module {
   lessons: Lesson[];
 }
 
+export interface CourseIntro {
+  teacherInfo: {
+    name: string;
+    bio: string;
+    image: string;
+  };
+  studentWork: {
+    title: string;
+    image: string;
+  }[];
+  software: {
+    name: string;
+    icon: string;
+  }[];
+  hardware: {
+    cpu: string;
+    ram: string;
+    gpu: string;
+  };
+}
+
 export interface Course {
   id: number;
   title: string;
@@ -38,6 +59,9 @@ export interface Course {
   description: string;
   thumbnail?: string;
   instructor?: string;
+  instructorId?: string; // Link to UserProfile.id
+  cuatrimestre?: number;
+  intro?: CourseIntro;
   modules: Module[];
 }
 
@@ -53,4 +77,29 @@ export interface CourseSummary {
 export interface Achievement {
   id: string;
   title: string;
+  description?: string;
+  icon?: string;
+  unlockedAt?: string;
+}
+
+export interface UserProfile {
+  id: string;
+  name: string;
+  email: string;
+  role: 'student' | 'teacher';
+  xp: number;
+  level: number;
+  cuatrimestre: number;
+  achievements: Achievement[];
+  completedLessons: number[];
+  completedQuizzes: number[];
+  assignedCourses?: number[]; // IDs of courses assigned to this teacher
+  bio?: string;
+  avatar?: string;
+  socialLinks?: {
+    twitter?: string;
+    linkedin?: string;
+    github?: string;
+    website?: string;
+  };
 }

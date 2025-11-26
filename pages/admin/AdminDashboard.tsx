@@ -2,9 +2,24 @@ import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCourses } from '../../context/CourseContext';
 
+import { useUser } from '../../context/UserContext';
+
 const AdminDashboard: React.FC = () => {
     const navigate = useNavigate();
     const { courses, deleteCourse } = useCourses();
+    const { user } = useUser();
+
+    // Filter courses based on user role
+    const filteredCourses = courses.filter(course => {
+        // If user is super admin (optional logic, for now just check assignments)
+        if (user?.email === 'admin@iaev.mx') return true;
+
+        // Check if course is assigned to this teacher
+        const isAssigned = user?.assignedCourses?.includes(course.id);
+        const isInstructor = course.instructorId === user?.id;
+
+        return isAssigned || isInstructor;
+    });
 
     return (
         <div className="max-w-5xl mx-auto">
@@ -22,13 +37,13 @@ const AdminDashboard: React.FC = () => {
                 </button>
             </div>
 
-            {courses.length === 0 ? (
+            {filteredCourses.length === 0 ? (
                 <div className="text-center py-20 glass rounded-2xl">
                     <div className="w-16 h-16 bg-white/50 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-500">
                         <ion-icon name="library-outline" class="w-8 h-8"></ion-icon>
                     </div>
-                    <h3 className="text-lg font-medium text-gray-800">No hay cursos todavía</h3>
-                    <p className="text-gray-600 mt-1 mb-6">Empieza creando tu primer curso para tus estudiantes.</p>
+                    <h3 className="text-lg font-medium text-gray-800">No hay cursos asignados</h3>
+                    <p className="text-gray-600 mt-1 mb-6">No tienes cursos asignados o creados todavía.</p>
                     <button
                         onClick={() => navigate('/admin/course/new')}
                         className="text-blue-600 font-medium hover:underline"
@@ -38,7 +53,7 @@ const AdminDashboard: React.FC = () => {
                 </div>
             ) : (
                 <div className="grid grid-cols-1 gap-6">
-                    {courses.map(course => (
+                    {filteredCourses.map(course => (
                         <div key={course.id} className="glass p-6 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center gap-6 hover:shadow-lg transition-shadow">
                             <div className="w-full sm:w-48 h-32 bg-white/30 rounded-xl overflow-hidden flex-shrink-0 relative group">
                                 {course.thumbnail ? (

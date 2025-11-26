@@ -38,7 +38,7 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onSelectCourse }) => {
 
     return (
         <div
-            className="group bg-white rounded-2xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-gray-100"
+            className="group glass dark:glass-dark rounded-2xl overflow-hidden flex flex-col h-full shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 border border-white/50 dark:border-white/10"
         >
             <div className="p-8 flex-grow relative">
                 <div className="absolute top-0 right-0 p-6">
@@ -48,10 +48,10 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onSelectCourse }) => {
                 </div>
 
                 <div className="mt-4 mb-4">
-                    <h3 className="text-xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors leading-tight">
+                    <h3 className="text-xl font-bold text-gray-900 dark:text-white group-hover:text-blue-600 transition-colors leading-tight">
                         {course.title}
                     </h3>
-                    <p className="text-sm text-gray-500 mt-2 leading-relaxed">
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-2 leading-relaxed">
                         {course.subtitle}
                     </p>
                 </div>
@@ -60,11 +60,11 @@ const CourseCard: React.FC<CourseCardProps> = ({ course, onSelectCourse }) => {
             <div className="px-8 pb-8 pt-0">
                 {course.progress > 0 && (
                     <div className="mb-6">
-                        <div className="flex justify-between text-xs font-medium text-gray-500 mb-2">
+                        <div className="flex justify-between text-xs font-medium text-gray-500 dark:text-gray-400 mb-2">
                             <span>Tu progreso</span>
-                            <span className="text-gray-900">{course.progress}%</span>
+                            <span className="text-gray-900 dark:text-white">{course.progress}%</span>
                         </div>
-                        <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
+                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 overflow-hidden">
                             <div
                                 className="bg-gradient-to-r from-blue-500 to-cyan-400 h-2 rounded-full transition-all duration-1000 ease-out"
                                 style={{ width: `${course.progress}%` }}

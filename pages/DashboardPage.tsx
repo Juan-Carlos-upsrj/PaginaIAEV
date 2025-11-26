@@ -1,13 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useCourses } from '../context/CourseContext';
-import ThemeToggle from '../components/ThemeToggle';
 import GlobalSearch from '../components/GlobalSearch';
+import ThemeToggle from '../components/ThemeToggle';
 
 const DashboardPage: React.FC = () => {
     const { user, logout } = useUser();
-    const { summaries: dashboardCourses } = useCourses();
+    const { courses } = useCourses();
     const navigate = useNavigate();
     const [greeting, setGreeting] = useState('');
 
@@ -23,12 +23,36 @@ const DashboardPage: React.FC = () => {
         navigate('/login');
     };
 
+    // Calculate dynamic stats
+    const completedLessonsCount = user?.completedLessons.length || 0;
+    const hoursLearned = Math.round((completedLessonsCount * 15) / 60); // Approx 15 mins per lesson
+
+    // Determine active course
+    const activeCourseId = user?.assignedCourses?.[0];
+    const activeCourse = activeCourseId
+        ? courses.find(c => c.id === Number(activeCourseId))
+        : courses[0];
+
+    // Calculate active course progress
+    const activeCourseProgress = activeCourse ? (() => {
+        const totalLessons = activeCourse.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+        if (totalLessons === 0) return 0;
+        const completedInCourse = activeCourse.modules.flatMap(m => m.lessons).filter(l => user?.completedLessons.includes(l.id)).length;
+        return Math.round((completedInCourse / totalLessons) * 100);
+    })() : 0;
+
+    // Filter courses for recommendations (exclude active course and filter by cuatrimestre)
+    const recommendedCourses = courses.filter(c =>
+        c.id !== activeCourse?.id &&
+        (c.cuatrimestre === user?.cuatrimestre || c.cuatrimestre === 0)
+    );
+
     if (!user) return null;
 
     return (
-        <div className="min-h-screen bg-transparent pb-20">
+        <div className="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
             {/* Header */}
-            <header className="sticky top-4 z-50 mx-4 mb-8 rounded-2xl glass shadow-sm">
+            <header className="bg-white/80 dark:bg-gray-900/80 backdrop-blur-md sticky top-0 z-50 border-b border-gray-200 dark:border-gray-800">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex justify-between items-center h-20">
                         <div className="flex items-center gap-4">
@@ -42,24 +66,24 @@ const DashboardPage: React.FC = () => {
 
                         <div className="flex items-center gap-6">
                             <nav className="hidden md:flex items-center gap-1">
-                                <a href="/dashboard" className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 font-medium transition-all">
+                                <Link to="/dashboard" className="px-4 py-2 rounded-xl bg-blue-50 text-blue-600 font-medium transition-all">
                                     Inicio
-                                </a>
-                                <a href="/courses" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
+                                </Link>
+                                <Link to="/courses" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
                                     Cursos
-                                </a>
-                                <a href="/community" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
+                                </Link>
+                                <Link to="/community" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
                                     Comunidad
-                                </a>
-                                <a href="/bookmarks" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
+                                </Link>
+                                <Link to="/bookmarks" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
                                     Marcadores
-                                </a>
-                                <a href="/calendar" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
+                                </Link>
+                                <Link to="/calendar" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
                                     Calendario
-                                </a>
-                                <a href="/kardex" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
+                                </Link>
+                                <Link to="/kardex" className="px-4 py-2 rounded-xl text-gray-600 hover:bg-gray-50 hover:text-gray-900 transition-all dark:text-gray-300 dark:hover:bg-gray-800 dark:hover:text-white">
                                     Kardex
-                                </a>
+                                </Link>
                             </nav>
 
                             <div className="h-8 w-px bg-gray-200 dark:bg-gray-700"></div>
@@ -85,6 +109,10 @@ const DashboardPage: React.FC = () => {
                                     {/* Dropdown Menu */}
                                     <div className="absolute right-0 top-full mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-xl border border-gray-100 dark:border-gray-700 opacity-0 invisible group-hover:opacity-100 group-hover:visible transform translate-y-2 group-hover:translate-y-0 transition-all duration-200 z-50">
                                         <div className="p-2">
+                                            <Link to="/profile" className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors">
+                                                <ion-icon name="person-outline"></ion-icon>
+                                                Mi Perfil
+                                            </Link>
                                             <button onClick={handleLogout} className="w-full flex items-center gap-2 px-3 py-2 rounded-lg text-sm text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
                                                 <ion-icon name="log-out-outline"></ion-icon>
                                                 Cerrar Sesión
@@ -98,7 +126,7 @@ const DashboardPage: React.FC = () => {
                 </div>
             </header>
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
                 {/* Welcome Section */}
                 <div className="mb-12 animate-fade-in">
                     <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-2">
@@ -109,150 +137,129 @@ const DashboardPage: React.FC = () => {
                     </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                    {/* Main Content Column */}
-                    <div className="lg:col-span-2 space-y-8">
-                        {/* Continue Learning */}
-                        <section>
-                            <div className="flex justify-between items-center mb-6">
-                                <h2 className="text-xl font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <ion-icon name="play-circle" class="text-blue-600"></ion-icon>
-                                    Continuar Aprendiendo
-                                </h2>
-                            </div>
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-12">
+                    {/* Main Progress Card */}
+                    <div className="lg:col-span-2">
+                        {activeCourse ? (
+                            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl shadow-blue-900/5 border border-gray-100 dark:border-gray-700 relative overflow-hidden group">
+                                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-32 -mt-32 group-hover:bg-blue-500/20 transition-all duration-500"></div>
 
-                            {/* Course Card */}
-                            <div className="glass dark:glass-dark rounded-3xl p-6 relative overflow-hidden group hover:shadow-xl transition-all duration-300 border border-white/50 dark:border-white/10">
-                                <div className="absolute top-0 right-0 w-64 h-64 bg-blue-500/10 rounded-full blur-3xl -mr-16 -mt-16 transition-all group-hover:bg-blue-500/20"></div>
-
-                                <div className="relative z-10 flex flex-col sm:flex-row gap-6 items-center">
-                                    <div className="w-full sm:w-48 h-32 rounded-2xl overflow-hidden shadow-lg relative group-hover:scale-105 transition-transform duration-500">
-                                        <img
-                                            src="https://images.unsplash.com/photo-1611162617474-5b21e879e113?q=80&w=1000&auto=format&fit=crop"
-                                            alt="Course"
-                                            className="w-full h-full object-cover"
-                                        />
-                                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/10 transition-colors flex items-center justify-center">
-                                            <div className="w-12 h-12 bg-white/90 rounded-full flex items-center justify-center shadow-lg backdrop-blur-sm transform scale-90 group-hover:scale-110 transition-all duration-300">
-                                                <ion-icon name="play" class="text-blue-600 text-xl ml-1"></ion-icon>
-                                            </div>
-                                        </div>
-                                    </div>
-
-                                    <div className="flex-1 w-full">
-                                        <div className="flex justify-between items-start mb-2">
-                                            <span className="px-3 py-1 bg-blue-100 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold rounded-full uppercase tracking-wider">
-                                                En Progreso
+                                <div className="relative z-10">
+                                    <div className="flex justify-between items-start mb-8">
+                                        <div>
+                                            <span className="inline-block px-3 py-1 rounded-lg bg-blue-50 dark:bg-blue-900/30 text-blue-600 dark:text-blue-400 text-xs font-bold mb-3 uppercase tracking-wider">
+                                                Continuar Aprendiendo
                                             </span>
-                                            <span className="text-sm font-bold text-gray-500 dark:text-gray-400">75%</span>
+                                            <h2 className="text-3xl font-bold text-gray-900 dark:text-white mb-2">
+                                                {activeCourse.title}
+                                            </h2>
+                                            <p className="text-gray-500 dark:text-gray-400 max-w-md">
+                                                {activeCourse.description}
+                                            </p>
                                         </div>
-
-                                        <h3 className="text-xl font-bold text-gray-900 dark:text-white mb-2 group-hover:text-blue-600 transition-colors">
-                                            Introducción a Houdini
-                                        </h3>
-                                        <p className="text-gray-500 dark:text-gray-400 text-sm mb-4 line-clamp-2">
-                                            Domina los fundamentos de la generación procedural y efectos visuales.
-                                        </p>
-
-                                        <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-2 mb-4 overflow-hidden">
-                                            <div className="bg-gradient-to-r from-blue-500 to-purple-500 h-full rounded-full w-3/4 shadow-[0_0_10px_rgba(59,130,246,0.5)] animate-pulse"></div>
+                                        <div className="w-16 h-16 rounded-2xl bg-blue-50 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400 text-2xl">
+                                            <ion-icon name="code-slash-outline"></ion-icon>
                                         </div>
-
-                                        <button onClick={() => navigate('/course/2')} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 dark:hover:text-blue-300 flex items-center gap-1 transition-colors">
-                                            Reanudar Lección <ion-icon name="arrow-forward"></ion-icon>
-                                        </button>
                                     </div>
+
+                                    <div className="flex items-end gap-4 mb-4">
+                                        <span className="text-4xl font-bold text-gray-900 dark:text-white">{activeCourseProgress}%</span>
+                                        <span className="text-gray-400 mb-2">completado</span>
+                                    </div>
+
+                                    <div className="w-full bg-gray-100 dark:bg-gray-700 rounded-full h-3 mb-8 overflow-hidden">
+                                        <div
+                                            className="bg-gradient-to-r from-blue-600 to-purple-600 h-full rounded-full transition-all duration-1000 ease-out relative"
+                                            style={{ width: `${activeCourseProgress}%` }}
+                                        >
+                                            <div className="absolute inset-0 bg-white/30 animate-[shimmer_2s_infinite]"></div>
+                                        </div>
+                                    </div>
+
+                                    <button
+                                        onClick={() => navigate(`/course/${activeCourse.id}/learn`)}
+                                        className="w-full sm:w-auto px-8 py-4 bg-gray-900 dark:bg-white text-white dark:text-gray-900 rounded-xl font-bold hover:bg-gray-800 dark:hover:bg-gray-100 transition-all shadow-lg shadow-gray-900/20 flex items-center justify-center gap-2 group/btn"
+                                    >
+                                        Continuar Lección
+                                        <ion-icon name="arrow-forward-outline" class="group-hover/btn:translate-x-1 transition-transform"></ion-icon>
+                                    </button>
                                 </div>
                             </div>
-                        </section>
-
-                        {/* Recommended Courses */}
-                        <section>
-                            <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-6 flex items-center gap-2">
-                                <ion-icon name="compass" class="text-purple-600"></ion-icon>
-                                Explorar Cursos
-                            </h2>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                                {(dashboardCourses || []).map((course) => (
-                                    <div key={course.id} className="glass dark:glass-dark p-4 rounded-2xl hover:shadow-lg transition-all duration-300 group border border-white/50 dark:border-white/10">
-                                        <div className="h-40 rounded-xl overflow-hidden mb-4 relative">
-                                            <img src={course.thumbnail || course.image} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
-                                            <div className="absolute top-3 right-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-gray-800 dark:text-white shadow-sm flex items-center gap-1">
-                                                <ion-icon name="star" class="text-yellow-400"></ion-icon> 4.8
-                                            </div>
-                                        </div>
-                                        <h3 className="font-bold text-gray-900 dark:text-white mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">{course.title}</h3>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{course.subtitle}</p>
-                                        <div className="flex justify-between items-center">
-                                            <div className="text-xs text-gray-500 dark:text-gray-400">
-                                                {course.status === 'new' ? 'Nuevo' : 'En progreso'}
-                                            </div>
-                                            <button onClick={() => navigate(`/course/${course.id}`)} className="px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors shadow-lg shadow-gray-900/20">
-                                                Ver Curso
-                                            </button>
-                                        </div>
-                                    </div>
-                                ))}
+                        ) : (
+                            <div className="bg-white dark:bg-gray-800 rounded-3xl p-8 shadow-xl shadow-blue-900/5 border border-gray-100 dark:border-gray-700 flex items-center justify-center h-full">
+                                <p className="text-gray-500">No tienes cursos asignados aún.</p>
                             </div>
-                        </section>
+                        )}
                     </div>
 
-                    {/* Sidebar Column */}
-                    <div className="space-y-8">
-                        {/* Stats Widget */}
-                        <div className="glass dark:glass-dark p-6 rounded-3xl border border-white/50 dark:border-white/10">
-                            <h3 className="font-bold text-gray-900 dark:text-white mb-4 flex items-center gap-2">
-                                <ion-icon name="stats-chart" class="text-green-500"></ion-icon>
-                                Tu Progreso
-                            </h3>
-                            <div className="space-y-4">
-                                <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 transition-colors">
-                                    <div className="w-10 h-10 rounded-full bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center text-blue-600 dark:text-blue-400">
-                                        <ion-icon name="time"></ion-icon>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Horas Aprendidas</p>
-                                        <p className="text-lg font-bold text-gray-900 dark:text-white">12.5h</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-4 p-3 rounded-2xl bg-white/50 dark:bg-gray-800/50 hover:bg-white dark:hover:bg-gray-800 transition-colors">
-                                    <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-600 dark:text-purple-400">
-                                        <ion-icon name="trophy"></ion-icon>
-                                    </div>
-                                    <div>
-                                        <p className="text-xs text-gray-500 dark:text-gray-400 font-medium">Cursos Completados</p>
-                                        <p className="text-lg font-bold text-gray-900 dark:text-white">2</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    {/* Stats Widget */}
+                    <div className="bg-gradient-to-br from-purple-600 to-blue-600 rounded-3xl p-8 text-white shadow-xl shadow-blue-600/20 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 w-64 h-64 bg-white/10 rounded-full blur-3xl -mr-16 -mt-16"></div>
+                        <div className="absolute bottom-0 left-0 w-64 h-64 bg-black/10 rounded-full blur-3xl -ml-16 -mb-16"></div>
 
-                        {/* Upcoming Deadlines Widget */}
-                        <div className="glass dark:glass-dark p-6 rounded-3xl border border-white/50 dark:border-white/10">
-                            <div className="flex justify-between items-center mb-4">
-                                <h3 className="font-bold text-gray-900 dark:text-white flex items-center gap-2">
-                                    <ion-icon name="calendar" class="text-red-500"></ion-icon>
-                                    Próximas Entregas
-                                </h3>
-                                <a href="/calendar" className="text-xs font-bold text-blue-600 dark:text-blue-400 hover:underline">Ver todo</a>
+                        <div className="relative z-10 h-full flex flex-col justify-between">
+                            <div>
+                                <h3 className="text-xl font-bold mb-1">Tu Progreso</h3>
+                                <p className="text-blue-100 text-sm">Esta semana</p>
                             </div>
-                            <div className="space-y-3">
-                                <div className="p-3 rounded-xl bg-red-50 dark:bg-red-900/20 border border-red-100 dark:border-red-900/30 flex gap-3 items-start">
-                                    <div className="mt-1 min-w-[4px] h-8 bg-red-500 rounded-full"></div>
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">Proyecto Final: Modelado 3D</p>
-                                        <p className="text-xs text-red-600 dark:text-red-400 font-medium mt-1">Vence: Mañana, 11:59 PM</p>
-                                    </div>
+
+                            <div className="grid grid-cols-2 gap-4 my-8">
+                                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
+                                    <div className="text-3xl font-bold mb-1">{hoursLearned}h</div>
+                                    <div className="text-xs text-blue-100">Aprendidas</div>
                                 </div>
-                                <div className="p-3 rounded-xl bg-yellow-50 dark:bg-yellow-900/20 border border-yellow-100 dark:border-yellow-900/30 flex gap-3 items-start">
-                                    <div className="mt-1 min-w-[4px] h-8 bg-yellow-500 rounded-full"></div>
-                                    <div>
-                                        <p className="text-sm font-bold text-gray-900 dark:text-white">Quiz: Iluminación Básica</p>
-                                        <p className="text-xs text-yellow-600 dark:text-yellow-400 font-medium mt-1">Vence: 25 Nov</p>
-                                    </div>
+                                <div className="bg-white/10 backdrop-blur-sm rounded-2xl p-4">
+                                    <div className="text-3xl font-bold mb-1">{completedLessonsCount}</div>
+                                    <div className="text-xs text-blue-100">Lecciones</div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div className="flex justify-between items-center mb-2">
+                                    <span className="text-sm font-medium">Promedio General</span>
+                                    <span className="font-bold">9.8</span>
+                                </div>
+                                <div className="w-full bg-black/20 rounded-full h-2">
+                                    <div className="bg-white h-full rounded-full w-[98%]"></div>
                                 </div>
                             </div>
                         </div>
+                    </div>
+                </div>
+
+                {/* Recommended Courses */}
+                <div className="mb-8">
+                    <div className="flex justify-between items-end mb-6">
+                        <div>
+                            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-1">Explorar Cursos</h2>
+                            <p className="text-gray-500 dark:text-gray-400">Recomendados para ti basados en tus intereses</p>
+                        </div>
+                        <Link to="/courses" className="text-blue-600 font-medium hover:text-blue-700 flex items-center gap-1">
+                            Ver todos <ion-icon name="arrow-forward-outline"></ion-icon>
+                        </Link>
+                    </div>
+
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+                        {recommendedCourses.map((course) => (
+                            <div key={course.id} className="glass dark:glass-dark p-4 rounded-2xl hover:shadow-lg transition-all duration-300 group border border-white/50 dark:border-white/10">
+                                <div className="h-40 rounded-xl overflow-hidden mb-4 relative">
+                                    <img src={course.thumbnail} alt={course.title} className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
+                                    <div className="absolute top-3 right-3 bg-white/90 dark:bg-gray-900/90 backdrop-blur-sm px-2 py-1 rounded-lg text-xs font-bold text-gray-800 dark:text-white shadow-sm flex items-center gap-1">
+                                        <ion-icon name="star" class="text-yellow-400"></ion-icon> 4.8
+                                    </div>
+                                </div>
+                                <h3 className="font-bold text-gray-900 dark:text-white mb-1 line-clamp-1 group-hover:text-blue-600 transition-colors">{course.title}</h3>
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-3 line-clamp-2">{course.subtitle}</p>
+                                <div className="flex justify-between items-center">
+                                    <div className="text-xs text-gray-500 dark:text-gray-400">
+                                        {course.modules.length} Módulos
+                                    </div>
+                                    <button onClick={() => navigate(`/course/${course.id}`)} className="px-3 py-1.5 bg-gray-900 dark:bg-white text-white dark:text-gray-900 text-xs font-bold rounded-lg hover:bg-gray-800 dark:hover:bg-gray-100 transition-colors shadow-lg shadow-gray-900/20">
+                                        Ver Curso
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </main>

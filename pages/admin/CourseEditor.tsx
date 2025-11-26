@@ -4,10 +4,13 @@ import { useCourses } from '../../context/CourseContext';
 import type { Course, Module, Lesson, Quiz } from '../../types';
 import QuizBuilder from './QuizBuilder';
 
+import { useUser } from '../../context/UserContext';
+
 const CourseEditor: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
     const navigate = useNavigate();
     const { getCourse, addCourse, updateCourse } = useCourses();
+    const { user, assignCourse } = useUser();
 
     const isNew = !courseId || courseId === 'new';
 
@@ -37,7 +40,12 @@ const CourseEditor: React.FC = () => {
         if (!formData.title) return alert('El título es obligatorio');
 
         if (isNew) {
-            addCourse(formData);
+            const newCourse = {
+                ...formData,
+                instructorId: user?.id // Assign current user as instructor
+            };
+            addCourse(newCourse);
+            assignCourse(newCourse.id); // Update user's assigned courses
         } else {
             updateCourse(formData);
         }

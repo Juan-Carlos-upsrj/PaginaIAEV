@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useCourses } from '../context/CourseContext';
 import { useUser } from '../context/UserContext';
@@ -11,18 +11,67 @@ const CoursePage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { getCourse } = useCourses();
-  const { completeQuiz } = useUser();
+  const { user, completeQuiz, completeLesson } = useUser();
   const { addBookmark, removeBookmark, isBookmarked } = useBookmarks();
 
   const course = useMemo(() => {
     return getCourse(Number(courseId));
   }, [courseId, getCourse]);
 
+  const courseProgress = useMemo(() => {
+    if (!course || !user) return 0;
+    const totalLessons = course.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+    if (totalLessons === 0) return 0;
+
+    const completedInCourse = course.modules.flatMap(m => m.lessons).filter(l => user.completedLessons.includes(l.id)).length;
+    return Math.round((completedInCourse / totalLessons) * 100);
+  }, [course, user]);
+
   const [currentModuleIndex, setCurrentModuleIndex] = useState(0);
   const [currentLessonIndex, setCurrentLessonIndex] = useState(0);
   const [showQuiz, setShowQuiz] = useState(false);
   const [showCommunity, setShowCommunity] = useState(false);
   const [showConfetti, setShowConfetti] = useState(false);
+
+  const currentModule = course?.modules[currentModuleIndex];
+  const currentLesson = currentModule?.lessons[currentLessonIndex];
+
+  const handleLessonSelect = useCallback((mIndex: number, lIndex: number) => {
+    setCurrentModuleIndex(mIndex);
+    setCurrentLessonIndex(lIndex);
+    setShowQuiz(false);
+    setShowCommunity(false);
+  }, []);
+
+  const handleExitCourse = useCallback(() => {
+    navigate('/dashboard');
+  }, [navigate]);
+
+  const handleQuizComplete = useCallback((score: number, total: number) => {
+    if (currentLesson && currentLesson.quiz) {
+      const percentage = score / total;
+      if (percentage >= 0.8) {
+        completeQuiz(currentLesson.quiz.id, score);
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 5000);
+      }
+    }
+  }, [currentLesson, completeQuiz]);
+
+  const toggleBookmark = useCallback(() => {
+    if (!currentLesson || !course) return;
+
+    if (isBookmarked(currentLesson.id)) {
+      removeBookmark(currentLesson.id);
+    } else {
+      addBookmark({
+        courseId: course.id,
+        lessonId: currentLesson.id,
+        courseTitle: course.title,
+        lessonTitle: currentLesson.title
+      });
+    }
+  }, [currentLesson, course, isBookmarked, removeBookmark, addBookmark]);
 
   if (!course) {
     return (
@@ -37,45 +86,6 @@ const CoursePage: React.FC = () => {
     );
   }
 
-  const currentModule = course.modules[currentModuleIndex];
-  const currentLesson = currentModule?.lessons[currentLessonIndex];
-
-  const handleLessonSelect = (mIndex: number, lIndex: number) => {
-    setCurrentModuleIndex(mIndex);
-    setCurrentLessonIndex(lIndex);
-    setShowQuiz(false); // Reset quiz view when changing lessons
-    setShowCommunity(false); // Reset to lesson view when changing lessons
-  };
-
-  const handleExitCourse = () => {
-    navigate('/dashboard');
-  };
-
-  const handleQuizComplete = (score: number, total: number) => {
-    if (currentLesson && currentLesson.quiz) {
-      completeQuiz(currentLesson.quiz.id, score);
-      if (score / total >= 0.8) {
-        setShowConfetti(true);
-        setTimeout(() => setShowConfetti(false), 5000);
-      }
-    }
-  };
-
-  const toggleBookmark = () => {
-    if (!currentLesson) return;
-
-    if (isBookmarked(currentLesson.id)) {
-      removeBookmark(currentLesson.id);
-    } else {
-      addBookmark({
-        courseId: course.id,
-        lessonId: currentLesson.id,
-        courseTitle: course.title,
-        lessonTitle: currentLesson.title
-      });
-    }
-  };
-
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       <Confetti trigger={showConfetti} />
@@ -88,10 +98,15 @@ const CoursePage: React.FC = () => {
             </button>
             <h1 className="font-bold text-gray-900 truncate" title={course.title}>{course.title}</h1>
           </div>
+
+          {/* Progress Bar */}
           <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-            <div className="bg-green-500 h-full w-1/3 rounded-full"></div>
+            <div
+              className="bg-green-500 h-full rounded-full transition-all duration-500"
+              style={{ width: `${courseProgress}%` }}
+            ></div>
           </div>
-          <p className="text-xs text-gray-500 mt-2 font-medium">33% Completado</p>
+          <p className="text-xs text-gray-500 mt-2 font-medium">{courseProgress}% Completado</p>
         </div>
 
         <div className="flex-1 overflow-y-auto custom-scrollbar">
@@ -103,6 +118,8 @@ const CoursePage: React.FC = () => {
               <div>
                 {module.lessons.map((lesson, lIndex) => {
                   const isActive = mIndex === currentModuleIndex && lIndex === currentLessonIndex;
+                  const isCompleted = user?.completedLessons.includes(lesson.id);
+
                   return (
                     <button
                       key={lesson.id}
@@ -110,9 +127,19 @@ const CoursePage: React.FC = () => {
                       className={`w-full px-6 py-4 flex items-center gap-3 text-left transition-all hover:bg-gray-50 ${isActive ? 'bg-blue-50 border-r-4 border-blue-500' : 'border-transparent'
                         }`}
                     >
-                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border ${isActive ? 'bg-blue-500 text-white border-blue-500' : 'border-gray-300 text-gray-400'
+                      <div className={`w-6 h-6 rounded-full flex items-center justify-center text-xs border ${isCompleted
+                        ? 'bg-green-500 text-white border-green-500'
+                        : isActive
+                          ? 'bg-blue-500 text-white border-blue-500'
+                          : 'border-gray-300 text-gray-400'
                         }`}>
-                        {isActive ? <ion-icon name="play"></ion-icon> : lIndex + 1}
+                        {isCompleted ? (
+                          <ion-icon name="checkmark"></ion-icon>
+                        ) : isActive ? (
+                          <ion-icon name="play"></ion-icon>
+                        ) : (
+                          lIndex + 1
+                        )}
                       </div>
                       <div className="flex-1">
                         <p className={`text-sm font-medium ${isActive ? 'text-blue-700' : 'text-gray-600'}`}>
@@ -209,6 +236,30 @@ const CoursePage: React.FC = () => {
                           >
                             <ion-icon name="school-outline" class="text-xl"></ion-icon>
                             Tomar Quiz
+                          </button>
+                        )}
+
+                        {!currentLesson.quiz && (
+                          <button
+                            onClick={() => {
+                              completeLesson(currentLesson.id);
+                            }}
+                            className={`flex items-center gap-2 px-6 py-3 rounded-xl font-bold shadow-lg transform hover:-translate-y-0.5 transition-all ${user?.completedLessons.includes(currentLesson.id)
+                              ? 'bg-green-100 text-green-700 shadow-green-500/20'
+                              : 'bg-blue-600 text-white shadow-blue-500/30 hover:bg-blue-700'
+                              }`}
+                          >
+                            {user?.completedLessons.includes(currentLesson.id) ? (
+                              <>
+                                <ion-icon name="checkmark-circle"></ion-icon>
+                                Completada
+                              </>
+                            ) : (
+                              <>
+                                <ion-icon name="checkmark-circle-outline"></ion-icon>
+                                Marcar como Vista
+                              </>
+                            )}
                           </button>
                         )}
                       </div>

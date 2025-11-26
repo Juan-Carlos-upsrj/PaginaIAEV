@@ -11,7 +11,7 @@ const GlobalSearch: React.FC = () => {
 
     const filteredCourses = (dashboardCourses || []).filter(course =>
         course.title.toLowerCase().includes(query.toLowerCase()) ||
-        course.description.toLowerCase().includes(query.toLowerCase())
+        course.subtitle.toLowerCase().includes(query.toLowerCase())
     );
 
     useEffect(() => {
@@ -55,7 +55,7 @@ const GlobalSearch: React.FC = () => {
             </div>
 
             {isOpen && query.length > 0 && (
-                <div className="absolute mt-2 w-full bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-100 dark:border-gray-700 max-h-60 overflow-y-auto z-50 custom-scrollbar">
+                <div className="absolute mt-2 w-full glass dark:glass-dark rounded-xl shadow-lg border border-white/50 dark:border-white/10 max-h-60 overflow-y-auto z-50 custom-scrollbar">
                     {filteredCourses.length > 0 ? (
                         <ul>
                             {filteredCourses.map((course) => (
@@ -64,10 +64,10 @@ const GlobalSearch: React.FC = () => {
                                         onClick={() => handleSelectCourse(course.id)}
                                         className="w-full text-left px-4 py-3 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors flex items-center gap-3"
                                     >
-                                        <img src={course.image} alt="" className="w-8 h-8 rounded-lg object-cover" />
+                                        <img src={course.thumbnail} alt="" className="w-8 h-8 rounded-lg object-cover" />
                                         <div>
                                             <p className="text-sm font-medium text-gray-900 dark:text-white">{course.title}</p>
-                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate w-48">{course.description}</p>
+                                            <p className="text-xs text-gray-500 dark:text-gray-400 truncate w-48">{course.subtitle}</p>
                                         </div>
                                     </button>
                                 </li>
