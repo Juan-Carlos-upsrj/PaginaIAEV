@@ -16,9 +16,11 @@ const LoginPage: React.FC = () => {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
+        console.log("Submit pressed"); // DEBUG
         setFormErrors({});
 
         try {
+            console.log("Validating data...", { email, password, name }); // DEBUG
             // Validate input
             const validatedData = loginSchema.parse({
                 email: sanitizeInput(email),
@@ -26,18 +28,25 @@ const LoginPage: React.FC = () => {
                 name: isRegistering ? sanitizeInput(name) : undefined
             });
 
+            console.log("Validation success", validatedData); // DEBUG
+
             // Simulate login/register
             const userName = validatedData.name || validatedData.email.split('@')[0];
             login(validatedData.email, userName);
+            console.log("Login called"); // DEBUG
 
             // Redirect based on role
             const isStudent = /^\d/.test(validatedData.email);
+            console.log("Is student?", isStudent); // DEBUG
             if (isStudent) {
+                console.log("Navigating to dashboard..."); // DEBUG
                 navigate('/dashboard');
             } else {
+                console.log("Navigating to admin..."); // DEBUG
                 navigate('/admin');
             }
         } catch (error) {
+            console.error("Catch block reached", error); // DEBUG
             if (error instanceof z.ZodError) {
                 const errors: Record<string, string> = {};
                 // Safety check for error.errors
@@ -49,6 +58,7 @@ const LoginPage: React.FC = () => {
                     });
                 }
                 setFormErrors(errors);
+                console.log("Form errors set", errors); // DEBUG
             } else {
                 console.error("Login error:", error);
                 alert("Ocurrió un error al iniciar sesión.");
