@@ -26,7 +26,11 @@ const AdminUsersPage: React.FC = () => {
         const subjects: (Subject & { quarterName: string })[] = [];
         quarters.forEach(q => {
             q.subjects.forEach(s => {
-                subjects.push({ ...s, quarterName: q.name });
+                // Filter out English and Human Development subjects
+                const nameLower = s.name.toLowerCase();
+                if (!nameLower.includes('inglés') && !nameLower.includes('desarrollo humano')) {
+                    subjects.push({ ...s, quarterName: q.name });
+                }
             });
         });
         return subjects;
