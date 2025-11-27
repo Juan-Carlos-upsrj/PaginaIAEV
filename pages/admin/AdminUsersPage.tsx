@@ -4,16 +4,26 @@ import { useUser } from '../../context/UserContext';
 import { UserProfile } from '../../types';
 
 const AdminUsersPage: React.FC = () => {
-    const { teachers, createTeacher, assignCourseToTeacher, quarters } = useAcademic();
+    const { teachers, students, createTeacher, createStudent, assignCourseToTeacher, quarters } = useAcademic();
     const { courses } = useUser();
 
-    // State for creating teacher
+    // UI State
+    const [activeTab, setActiveTab] = useState<'teachers' | 'students'>('teachers');
+
+    // State for creating user
     const [isCreating, setIsCreating] = useState(false);
     const [newTeacher, setNewTeacher] = useState({
         name: '',
         email: '',
         password: '',
         bio: ''
+    });
+    const [newStudent, setNewStudent] = useState({
+        name: '',
+        email: '',
+        password: '',
+        cuatrimestre: 1,
+        group: 'A' as 'A' | 'B' | 'C' | 'D'
     });
 
     // State for assigning course
@@ -56,16 +66,27 @@ const AdminUsersPage: React.FC = () => {
         return groups;
     }, [filteredSubjects]);
 
-    const handleCreateTeacher = (e: React.FormEvent) => {
+    const handleCreateUser = (e: React.FormEvent) => {
         e.preventDefault();
-        createTeacher({
-            name: newTeacher.name,
-            email: newTeacher.email,
-            bio: newTeacher.bio,
-            avatar: `https://ui-avatars.com/api/?name=${newTeacher.name}&background=random`
-        });
+        if (activeTab === 'teachers') {
+            createTeacher({
+                name: newTeacher.name,
+                email: newTeacher.email,
+                bio: newTeacher.bio,
+                avatar: `https://ui-avatars.com/api/?name=${newTeacher.name}&background=random`
+            });
+            setNewTeacher({ name: '', email: '', password: '', bio: '' });
+        } else {
+            createStudent({
+                name: newStudent.name,
+                email: newStudent.email,
+                cuatrimestre: newStudent.cuatrimestre,
+                group: newStudent.group,
+                avatar: `https://ui-avatars.com/api/?name=${newStudent.name}&background=random`
+            });
+            setNewStudent({ name: '', email: '', password: '', cuatrimestre: 1, group: 'A' });
+        }
         setIsCreating(false);
-        setNewTeacher({ name: '', email: '', password: '', bio: '' });
     };
 
     const openAssignModal = (teacherId: string) => {
@@ -94,54 +115,138 @@ const AdminUsersPage: React.FC = () => {
         <div className="p-6 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
                 <div>
-                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Docentes</h1>
-                    <p className="text-gray-500 dark:text-gray-400 mt-1">Administra las cuentas de profesores y sus asignaciones.</p>
+                    <h1 className="text-3xl font-bold text-gray-900 dark:text-white">Gestión de Usuarios</h1>
+                    <p className="text-gray-500 dark:text-gray-400 mt-1">Administra las cuentas de profesores y estudiantes.</p>
                 </div>
                 <button
                     onClick={() => setIsCreating(true)}
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/30"
                 >
                     <ion-icon name="person-add-outline"></ion-icon>
-                    Nuevo Profesor
+                    {activeTab === 'teachers' ? 'Nuevo Profesor' : 'Nuevo Estudiante'}
                 </button>
             </div>
 
-            {/* Create Teacher Modal */}
+            {/* Tabs */}
+            <div className="flex gap-4 mb-8 border-b border-gray-200 dark:border-gray-700">
+                <button
+                    onClick={() => setActiveTab('teachers')}
+                    className={`pb-3 px-4 text-sm font-medium transition-colors relative ${activeTab === 'teachers' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                >
+                    Profesores
+                    {activeTab === 'teachers' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></div>}
+                </button>
+                <button
+                    onClick={() => setActiveTab('students')}
+                    className={`pb-3 px-4 text-sm font-medium transition-colors relative ${activeTab === 'students' ? 'text-blue-600 dark:text-blue-400' : 'text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-300'}`}
+                >
+                    Estudiantes
+                    {activeTab === 'students' && <div className="absolute bottom-0 left-0 w-full h-0.5 bg-blue-600 dark:bg-blue-400 rounded-t-full"></div>}
+                </button>
+            </div>
+
+            {/* Create User Modal */}
             {isCreating && (
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-gray-700">
-                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">Registrar Nuevo Profesor</h2>
-                        <form onSubmit={handleCreateTeacher} className="space-y-4">
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre Completo</label>
-                                <input
-                                    type="text"
-                                    required
-                                    value={newTeacher.name}
-                                    onChange={e => setNewTeacher({ ...newTeacher, name: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Correo Institucional (@iaev.mx)</label>
-                                <input
-                                    type="email"
-                                    required
-                                    value={newTeacher.email}
-                                    onChange={e => setNewTeacher({ ...newTeacher, email: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
-                            <div>
-                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contraseña Temporal</label>
-                                <input
-                                    type="password"
-                                    required
-                                    value={newTeacher.password}
-                                    onChange={e => setNewTeacher({ ...newTeacher, password: e.target.value })}
-                                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                />
-                            </div>
+                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+                            {activeTab === 'teachers' ? 'Registrar Nuevo Profesor' : 'Registrar Nuevo Estudiante'}
+                        </h2>
+                        <form onSubmit={handleCreateUser} className="space-y-4">
+                            {activeTab === 'teachers' ? (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre Completo</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newTeacher.name}
+                                            onChange={e => setNewTeacher({ ...newTeacher, name: e.target.value })}
+                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Correo Institucional (@iaev.mx)</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={newTeacher.email}
+                                            onChange={e => setNewTeacher({ ...newTeacher, email: e.target.value })}
+                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contraseña Temporal</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            value={newTeacher.password}
+                                            onChange={e => setNewTeacher({ ...newTeacher, password: e.target.value })}
+                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre Completo</label>
+                                        <input
+                                            type="text"
+                                            required
+                                            value={newStudent.name}
+                                            onChange={e => setNewStudent({ ...newStudent, name: e.target.value })}
+                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Correo Institucional (@iaev.mx)</label>
+                                        <input
+                                            type="email"
+                                            required
+                                            value={newStudent.email}
+                                            onChange={e => setNewStudent({ ...newStudent, email: e.target.value })}
+                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cuatrimestre</label>
+                                            <select
+                                                value={newStudent.cuatrimestre}
+                                                onChange={e => setNewStudent({ ...newStudent, cuatrimestre: Number(e.target.value) })}
+                                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(q => (
+                                                    <option key={q} value={q}>{q}º</option>
+                                                ))}
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grupo</label>
+                                            <select
+                                                value={newStudent.group}
+                                                onChange={e => setNewStudent({ ...newStudent, group: e.target.value as any })}
+                                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                            >
+                                                <option value="A">A</option>
+                                                <option value="B">B</option>
+                                                <option value="C">C</option>
+                                                <option value="D">D</option>
+                                            </select>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contraseña Temporal</label>
+                                        <input
+                                            type="password"
+                                            required
+                                            value={newStudent.password}
+                                            onChange={e => setNewStudent({ ...newStudent, password: e.target.value })}
+                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                        />
+                                    </div>
+                                </>
+                            )}
                             <div className="flex justify-end gap-3 mt-6">
                                 <button
                                     type="button"
@@ -154,7 +259,7 @@ const AdminUsersPage: React.FC = () => {
                                     type="submit"
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                 >
-                                    Crear Cuenta
+                                    {activeTab === 'teachers' ? 'Crear Profesor' : 'Crear Estudiante'}
                                 </button>
                             </div>
                         </form>
@@ -237,67 +342,107 @@ const AdminUsersPage: React.FC = () => {
                 </div>
             )}
 
-            {/* Teachers List */}
+            {/* Users List */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                {teachers.map((teacher) => (
-                    <div key={teacher.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
-                        <div className="flex items-start justify-between mb-4">
-                            <div className="flex items-center gap-3">
-                                <img
-                                    src={teacher.avatar || `https://ui-avatars.com/api/?name=${teacher.name}`}
-                                    alt={teacher.name}
-                                    className="w-12 h-12 rounded-full ring-2 ring-white dark:ring-gray-700 shadow-sm"
-                                />
+                {activeTab === 'teachers' ? (
+                    // Teachers List
+                    teachers.map((teacher) => (
+                        <div key={teacher.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <img
+                                        src={teacher.avatar || `https://ui-avatars.com/api/?name=${teacher.name}`}
+                                        alt={teacher.name}
+                                        className="w-12 h-12 rounded-full ring-2 ring-white dark:ring-gray-700 shadow-sm"
+                                    />
+                                    <div>
+                                        <h3 className="font-bold text-gray-900 dark:text-white">{teacher.name}</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{teacher.email}</p>
+                                    </div>
+                                </div>
+                                <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs rounded-full font-medium">
+                                    Docente
+                                </span>
+                            </div>
+
+                            <div className="border-t border-gray-100 dark:border-gray-700 pt-4 mt-4">
+                                <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Materias Asignadas</h4>
+                                {teacher.assignedCourses && teacher.assignedCourses.length > 0 ? (
+                                    <div className="flex flex-wrap gap-2">
+                                        {teacher.assignedCourses.map(courseId => {
+                                            // Try to find subject name if possible, otherwise show ID
+                                            // Since we hashed the ID, we can't easily reverse it without a lookup map.
+                                            // For this demo, we'll just show "Materia Asignada" or the ID.
+                                            // Ideally we would store the string ID in assignedCourses, but types.ts says number[].
+                                            return (
+                                                <span key={courseId} className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-md border border-blue-100 dark:border-blue-800">
+                                                    Materia #{courseId}
+                                                </span>
+                                            );
+                                        })}
+                                    </div>
+                                ) : (
+                                    <p className="text-sm text-gray-400 italic">Sin asignaciones</p>
+                                )}
+
+                                <div className="mt-4 pt-2">
+                                    <button
+                                        className="w-full py-2 text-sm text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-2"
+                                        onClick={() => openAssignModal(teacher.id)}
+                                    >
+                                        <ion-icon name="add-circle-outline"></ion-icon>
+                                        Asignar Materia
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    ))
+                ) : (
+                    // Students List
+                    students.map((student) => (
+                        <div key={student.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
+                            <div className="flex items-start justify-between mb-4">
+                                <div className="flex items-center gap-3">
+                                    <img
+                                        src={student.avatar || `https://ui-avatars.com/api/?name=${student.name}`}
+                                        alt={student.name}
+                                        className="w-12 h-12 rounded-full ring-2 ring-white dark:ring-gray-700 shadow-sm"
+                                    />
+                                    <div>
+                                        <h3 className="font-bold text-gray-900 dark:text-white">{student.name}</h3>
+                                        <p className="text-sm text-gray-500 dark:text-gray-400">{student.email}</p>
+                                    </div>
+                                </div>
+                                <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs rounded-full font-medium">
+                                    Estudiante
+                                </span>
+                            </div>
+
+                            <div className="border-t border-gray-100 dark:border-gray-700 pt-4 mt-4 grid grid-cols-2 gap-4">
                                 <div>
-                                    <h3 className="font-bold text-gray-900 dark:text-white">{teacher.name}</h3>
-                                    <p className="text-sm text-gray-500 dark:text-gray-400">{teacher.email}</p>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Cuatrimestre</p>
+                                    <p className="font-bold text-gray-900 dark:text-white">{student.cuatrimestre}º</p>
+                                </div>
+                                <div>
+                                    <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Grupo</p>
+                                    <p className="font-bold text-gray-900 dark:text-white">{student.group}</p>
                                 </div>
                             </div>
-                            <span className="px-2 py-1 bg-purple-100 dark:bg-purple-900/30 text-purple-600 dark:text-purple-400 text-xs rounded-full font-medium">
-                                Docente
-                            </span>
                         </div>
+                    ))
+                )}
 
-                        <div className="border-t border-gray-100 dark:border-gray-700 pt-4 mt-4">
-                            <h4 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3">Materias Asignadas</h4>
-                            {teacher.assignedCourses && teacher.assignedCourses.length > 0 ? (
-                                <div className="flex flex-wrap gap-2">
-                                    {teacher.assignedCourses.map(courseId => {
-                                        // Try to find subject name if possible, otherwise show ID
-                                        // Since we hashed the ID, we can't easily reverse it without a lookup map.
-                                        // For this demo, we'll just show "Materia Asignada" or the ID.
-                                        // Ideally we would store the string ID in assignedCourses, but types.ts says number[].
-                                        return (
-                                            <span key={courseId} className="px-2 py-1 bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 text-xs rounded-md border border-blue-100 dark:border-blue-800">
-                                                Materia #{courseId}
-                                            </span>
-                                        );
-                                    })}
-                                </div>
-                            ) : (
-                                <p className="text-sm text-gray-400 italic">Sin asignaciones</p>
-                            )}
-
-                            <div className="mt-4 pt-2">
-                                <button
-                                    className="w-full py-2 text-sm text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800 rounded-lg hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-colors flex items-center justify-center gap-2"
-                                    onClick={() => openAssignModal(teacher.id)}
-                                >
-                                    <ion-icon name="add-circle-outline"></ion-icon>
-                                    Asignar Materia
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                ))}
-
-                {teachers.length === 0 && (
+                {((activeTab === 'teachers' && teachers.length === 0) || (activeTab === 'students' && students.length === 0)) && (
                     <div className="col-span-full text-center py-12 bg-gray-50 dark:bg-gray-800/50 rounded-2xl border-2 border-dashed border-gray-200 dark:border-gray-700">
                         <div className="text-gray-400 mb-3">
                             <ion-icon name="people-outline" style={{ fontSize: '48px' }}></ion-icon>
                         </div>
-                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">No hay profesores registrados</h3>
-                        <p className="text-gray-500 dark:text-gray-400">Comienza creando una cuenta para un docente.</p>
+                        <h3 className="text-lg font-medium text-gray-900 dark:text-white">
+                            No hay {activeTab === 'teachers' ? 'profesores' : 'estudiantes'} registrados
+                        </h3>
+                        <p className="text-gray-500 dark:text-gray-400">
+                            Comienza creando una cuenta para un {activeTab === 'teachers' ? 'docente' : 'alumno'}.
+                        </p>
                     </div>
                 )}
             </div>

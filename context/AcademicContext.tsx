@@ -36,7 +36,9 @@ interface AcademicContextType {
 
     // Admin features
     teachers: UserProfile[];
+    students: UserProfile[];
     createTeacher: (teacher: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'cuatrimestre'>) => void;
+    createStudent: (student: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'assignedCourses'>) => void;
     assignCourseToTeacher: (teacherId: string, courseId: number) => void;
     getGlobalStats: (filter?: { group?: Group; cuatrimestre?: number }) => GlobalStats;
 }
@@ -157,6 +159,7 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Admin State
     const [teachers, setTeachers] = useLocalStorage<UserProfile[]>('teachers', []);
+    const [students, setStudents] = useLocalStorage<UserProfile[]>('students', []);
 
     // Load curriculum based on user profile
     useEffect(() => {
@@ -213,6 +216,21 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTeachers([...teachers, newTeacher]);
     };
 
+    const createStudent = (studentData: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'assignedCourses'>) => {
+        const newStudent: UserProfile = {
+            ...studentData,
+            id: `student-${Date.now()}`,
+            role: 'student',
+            achievements: [],
+            completedLessons: [],
+            completedQuizzes: [],
+            xp: 0,
+            level: 1,
+            // cuatrimestre and group are passed in studentData
+        };
+        setStudents([...students, newStudent]);
+    };
+
     const assignCourseToTeacher = (teacherId: string, courseId: number) => {
         setTeachers(teachers.map(t => {
             if (t.id === teacherId) {
@@ -259,7 +277,9 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             gpa,
             progress,
             teachers,
+            students,
             createTeacher,
+            createStudent,
             assignCourseToTeacher,
             getGlobalStats
         }}>
