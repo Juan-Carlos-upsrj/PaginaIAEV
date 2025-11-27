@@ -4,7 +4,7 @@ import { useUser } from '../../context/UserContext';
 import { UserProfile } from '../../types';
 
 const AdminUsersPage: React.FC = () => {
-    const { teachers, students, createTeacher, createStudent, assignCourseToTeacher, quarters } = useAcademic();
+    const { teachers, students, allowedEmails, createTeacher, authorizeStudent, assignCourseToTeacher, quarters } = useAcademic();
     const { courses } = useUser();
 
     // UI State
@@ -18,13 +18,7 @@ const AdminUsersPage: React.FC = () => {
         password: '',
         bio: ''
     });
-    const [newStudent, setNewStudent] = useState({
-        name: '',
-        email: '',
-        password: '',
-        cuatrimestre: 1,
-        group: 'A' as 'A' | 'B' | 'C' | 'D'
-    });
+    const [authEmail, setAuthEmail] = useState('');
 
     // State for assigning course
     const [isAssigning, setIsAssigning] = useState(false);
@@ -77,14 +71,8 @@ const AdminUsersPage: React.FC = () => {
             });
             setNewTeacher({ name: '', email: '', password: '', bio: '' });
         } else {
-            createStudent({
-                name: newStudent.name,
-                email: newStudent.email,
-                cuatrimestre: newStudent.cuatrimestre,
-                group: newStudent.group,
-                avatar: `https://ui-avatars.com/api/?name=${newStudent.name}&background=random`
-            });
-            setNewStudent({ name: '', email: '', password: '', cuatrimestre: 1, group: 'A' });
+            authorizeStudent(authEmail);
+            setAuthEmail('');
         }
         setIsCreating(false);
     };
@@ -123,7 +111,7 @@ const AdminUsersPage: React.FC = () => {
                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/30"
                 >
                     <ion-icon name="person-add-outline"></ion-icon>
-                    {activeTab === 'teachers' ? 'Nuevo Profesor' : 'Nuevo Estudiante'}
+                    {activeTab === 'teachers' ? 'Nuevo Profesor' : 'Autorizar Alumno'}
                 </button>
             </div>
 
@@ -150,7 +138,7 @@ const AdminUsersPage: React.FC = () => {
                 <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
                     <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-gray-100 dark:border-gray-700">
                         <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
-                            {activeTab === 'teachers' ? 'Registrar Nuevo Profesor' : 'Registrar Nuevo Estudiante'}
+                            {activeTab === 'teachers' ? 'Registrar Nuevo Profesor' : 'Autorizar Nuevo Estudiante'}
                         </h2>
                         <form onSubmit={handleCreateUser} className="space-y-4">
                             {activeTab === 'teachers' ? (
@@ -188,61 +176,20 @@ const AdminUsersPage: React.FC = () => {
                                 </>
                             ) : (
                                 <>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Nombre Completo</label>
-                                        <input
-                                            type="text"
-                                            required
-                                            value={newStudent.name}
-                                            onChange={e => setNewStudent({ ...newStudent, name: e.target.value })}
-                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                        />
+                                    <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-4">
+                                        <p className="text-sm text-blue-800 dark:text-blue-200">
+                                            Ingresa el correo institucional del alumno. El alumno podrá registrarse usando este correo.
+                                        </p>
                                     </div>
                                     <div>
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Correo Institucional (@iaev.mx)</label>
                                         <input
                                             type="email"
                                             required
-                                            value={newStudent.email}
-                                            onChange={e => setNewStudent({ ...newStudent, email: e.target.value })}
+                                            value={authEmail}
+                                            onChange={e => setAuthEmail(e.target.value)}
                                             className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                        />
-                                    </div>
-                                    <div className="grid grid-cols-2 gap-4">
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Cuatrimestre</label>
-                                            <select
-                                                value={newStudent.cuatrimestre}
-                                                onChange={e => setNewStudent({ ...newStudent, cuatrimestre: Number(e.target.value) })}
-                                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                            >
-                                                {[1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(q => (
-                                                    <option key={q} value={q}>{q}º</option>
-                                                ))}
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grupo</label>
-                                            <select
-                                                value={newStudent.group}
-                                                onChange={e => setNewStudent({ ...newStudent, group: e.target.value as any })}
-                                                className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
-                                            >
-                                                <option value="A">A</option>
-                                                <option value="B">B</option>
-                                                <option value="C">C</option>
-                                                <option value="D">D</option>
-                                            </select>
-                                        </div>
-                                    </div>
-                                    <div>
-                                        <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Contraseña Temporal</label>
-                                        <input
-                                            type="password"
-                                            required
-                                            value={newStudent.password}
-                                            onChange={e => setNewStudent({ ...newStudent, password: e.target.value })}
-                                            className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                                            placeholder="matricula@alumno.iaev.mx"
                                         />
                                     </div>
                                 </>
@@ -259,7 +206,7 @@ const AdminUsersPage: React.FC = () => {
                                     type="submit"
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                 >
-                                    {activeTab === 'teachers' ? 'Crear Profesor' : 'Crear Estudiante'}
+                                    {activeTab === 'teachers' ? 'Crear Profesor' : 'Autorizar'}
                                 </button>
                             </div>
                         </form>
@@ -344,6 +291,26 @@ const AdminUsersPage: React.FC = () => {
 
             {/* Users List */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                {activeTab === 'students' && (
+                    <div className="col-span-full mb-8">
+                        <h3 className="text-lg font-bold text-gray-900 dark:text-white mb-4">Correos Autorizados</h3>
+                        <div className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700">
+                            {allowedEmails.length > 0 ? (
+                                <div className="flex flex-wrap gap-2">
+                                    {allowedEmails.map(email => (
+                                        <span key={email} className="px-3 py-1 bg-green-50 dark:bg-green-900/20 text-green-700 dark:text-green-300 rounded-full text-sm border border-green-100 dark:border-green-800 flex items-center gap-2">
+                                            {email}
+                                            <ion-icon name="checkmark-circle" style={{ fontSize: '16px' }}></ion-icon>
+                                        </span>
+                                    ))}
+                                </div>
+                            ) : (
+                                <p className="text-gray-500 dark:text-gray-400 text-sm">No hay correos autorizados aún. Agrega uno para permitir el registro.</p>
+                            )}
+                        </div>
+                    </div>
+                )}
+
                 {activeTab === 'teachers' ? (
                     // Teachers List
                     teachers.map((teacher) => (

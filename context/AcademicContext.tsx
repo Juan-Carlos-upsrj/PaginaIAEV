@@ -37,8 +37,10 @@ interface AcademicContextType {
     // Admin features
     teachers: UserProfile[];
     students: UserProfile[];
+    allowedEmails: string[];
     createTeacher: (teacher: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'cuatrimestre'>) => void;
     createStudent: (student: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'assignedCourses'>) => void;
+    authorizeStudent: (email: string) => void;
     assignCourseToTeacher: (teacherId: string, courseId: number) => void;
     getGlobalStats: (filter?: { group?: Group; cuatrimestre?: number }) => GlobalStats;
 }
@@ -159,7 +161,8 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Admin State
     const [teachers, setTeachers] = useLocalStorage<UserProfile[]>('teachers', []);
-    const [students, setStudents] = useLocalStorage<UserProfile[]>('students', []);
+    const [students, setStudents] = useLocalStorage<UserProfile[]>('students_v2', []); // Resetting DB
+    const [allowedEmails, setAllowedEmails] = useLocalStorage<string[]>('allowed_emails', []);
 
     // Load curriculum based on user profile
     useEffect(() => {
@@ -214,6 +217,12 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             assignedCourses: []
         };
         setTeachers([...teachers, newTeacher]);
+    };
+
+    const authorizeStudent = (email: string) => {
+        if (!allowedEmails.includes(email)) {
+            setAllowedEmails([...allowedEmails, email]);
+        }
     };
 
     const createStudent = (studentData: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'assignedCourses'>) => {
@@ -278,8 +287,10 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             progress,
             teachers,
             students,
+            allowedEmails,
             createTeacher,
             createStudent,
+            authorizeStudent,
             assignCourseToTeacher,
             getGlobalStats
         }}>
