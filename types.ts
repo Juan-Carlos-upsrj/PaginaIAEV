@@ -82,6 +82,26 @@ export interface Achievement {
   unlockedAt?: string;
 }
 
+export type Group = 'A' | 'B' | 'C' | 'D';
+
+export interface Grade {
+  courseId: number;
+  score: number; // 0-100
+  lastUpdated: string;
+}
+
+export interface AttendanceRecord {
+  date: string;
+  present: boolean;
+}
+
+export interface AcademicRecord {
+  grades: Grade[];
+  attendance: AttendanceRecord[];
+  averageGrade: number;
+  attendanceRate: number; // 0-100
+}
+
 export interface UserProfile {
   id: string;
   name: string;
@@ -90,6 +110,8 @@ export interface UserProfile {
   xp: number;
   level: number;
   cuatrimestre: number;
+  group?: Group; // Added group
+  academicRecord?: AcademicRecord; // Added academic record
   achievements: Achievement[];
   completedLessons: number[];
   completedQuizzes: number[];

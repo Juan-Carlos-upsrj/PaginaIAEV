@@ -1,5 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useUser } from './UserContext';
+import { UserProfile, Group, AcademicRecord } from '../types';
+import { useLocalStorage } from '../hooks/useLocalStorage';
 
 export interface Subject {
     id: string;
@@ -18,11 +20,25 @@ export interface Quarter {
     average?: number;
 }
 
+export interface GlobalStats {
+    averageAttendance: number;
+    averageGrade: number;
+    totalStudents: number;
+    activeCourses: number;
+}
+
 interface AcademicContextType {
+    // Student features
     quarters: Quarter[];
     currentQuarter: Quarter | undefined;
     gpa: number;
     progress: number;
+
+    // Admin features
+    teachers: UserProfile[];
+    createTeacher: (teacher: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'cuatrimestre'>) => void;
+    assignCourseToTeacher: (teacherId: string, courseId: number) => void;
+    getGlobalStats: (filter?: { group?: Group; cuatrimestre?: number }) => GlobalStats;
 }
 
 const AcademicContext = createContext<AcademicContextType | undefined>(undefined);
@@ -80,6 +96,9 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [gpa, setGpa] = useState(0);
     const [progress, setProgress] = useState(0);
 
+    // Admin State
+    const [teachers, setTeachers] = useLocalStorage<UserProfile[]>('teachers', []);
+
     // Load curriculum based on user profile
     useEffect(() => {
         if (user) {
@@ -118,10 +137,73 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setProgress(allSubjectsCount > 0 ? Math.round((completedSubjects / allSubjectsCount) * 100) : 0);
     }, [quarters]);
 
+    // Admin Functions
+    const createTeacher = (teacherData: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'cuatrimestre'>) => {
+        const newTeacher: UserProfile = {
+            ...teacherData,
+            id: `teacher-${Date.now()}`,
+            role: 'teacher',
+            achievements: [],
+            completedLessons: [],
+            completedQuizzes: [],
+            xp: 0,
+            level: 1,
+            cuatrimestre: 0, // Teachers don't have a cuatrimestre
+            assignedCourses: []
+        };
+        setTeachers([...teachers, newTeacher]);
+    };
+
+    const assignCourseToTeacher = (teacherId: string, courseId: number) => {
+        setTeachers(teachers.map(t => {
+            if (t.id === teacherId) {
+                const currentCourses = t.assignedCourses || [];
+                if (!currentCourses.includes(courseId)) {
+                    return { ...t, assignedCourses: [...currentCourses, courseId] };
+                }
+            }
+            return t;
+        }));
+    };
+
+    const getGlobalStats = (filter?: { group?: Group; cuatrimestre?: number }): GlobalStats => {
+        // Mock calculation - in a real app this would aggregate from all students
+        // For demo purposes, we return static or semi-random data based on filters
+
+        let baseAttendance = 85;
+        let baseGrade = 8.5;
+
+        if (filter?.cuatrimestre) {
+            baseAttendance += (filter.cuatrimestre % 2 === 0) ? 5 : -2;
+            baseGrade += (filter.cuatrimestre === 1) ? 0.5 : -0.2;
+        }
+
+        if (filter?.group) {
+            if (filter.group === 'A') baseGrade += 0.3;
+            if (filter.group === 'B') baseAttendance -= 5;
+        }
+
+        return {
+            averageAttendance: Math.min(100, Math.max(0, baseAttendance)),
+            averageGrade: Math.min(10, Math.max(0, baseGrade)),
+            totalStudents: 120, // Mock total
+            activeCourses: 15
+        };
+    };
+
     const currentQuarter = quarters.find(q => q.status === 'current');
 
     return (
-        <AcademicContext.Provider value={{ quarters, currentQuarter, gpa, progress }}>
+        <AcademicContext.Provider value={{
+            quarters,
+            currentQuarter,
+            gpa,
+            progress,
+            teachers,
+            createTeacher,
+            assignCourseToTeacher,
+            getGlobalStats
+        }}>
             {children}
         </AcademicContext.Provider>
     );
