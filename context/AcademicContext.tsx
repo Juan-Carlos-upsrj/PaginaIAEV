@@ -220,8 +220,9 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     const authorizeStudent = (email: string) => {
-        if (!allowedEmails.includes(email)) {
-            setAllowedEmails([...allowedEmails, email]);
+        const normalizedEmail = email.trim().toLowerCase();
+        if (!allowedEmails.includes(normalizedEmail)) {
+            setAllowedEmails([...allowedEmails, normalizedEmail]);
         }
     };
 

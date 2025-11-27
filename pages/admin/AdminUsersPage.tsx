@@ -71,7 +71,7 @@ const AdminUsersPage: React.FC = () => {
             });
             setNewTeacher({ name: '', email: '', password: '', bio: '' });
         } else {
-            authorizeStudent(authEmail);
+            authorizeStudent(authEmail.trim().toLowerCase());
             setAuthEmail('');
         }
         setIsCreating(false);

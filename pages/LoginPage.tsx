@@ -40,12 +40,13 @@ const LoginPage: React.FC = () => {
 
             if (isStudentEmail) {
                 // Student Logic
-                if (!allowedEmails.includes(email)) {
+                const normalizedEmail = email.trim().toLowerCase();
+                if (!allowedEmails.includes(normalizedEmail)) {
                     setGeneralError("Este correo no está autorizado. Contacta al administrador.");
                     return;
                 }
 
-                const existingStudent = students.find(s => s.email === email);
+                const existingStudent = students.find(s => s.email === normalizedEmail);
 
                 if (isRegistering) {
                     // Completing registration
@@ -63,24 +64,21 @@ const LoginPage: React.FC = () => {
                     // Create the student account
                     createStudent({
                         name: sanitizeInput(name),
-                        email: sanitizeInput(email),
+                        email: normalizedEmail,
                         cuatrimestre,
                         group,
                         avatar: `https://ui-avatars.com/api/?name=${name}&background=random`
                     });
 
                     // Auto login
-                    login(email, name);
+                    login(normalizedEmail, name);
                     navigate('/dashboard');
 
                 } else {
                     // Login attempt
                     if (existingStudent) {
                         // Check password (mock check)
-                        // In a real app we would check hash, here we just check if it matches what they typed
-                        // For this demo, we assume if account exists and they are whitelisted, let them in if password is not empty
-                        // Ideally we would store password in UserProfile but we don't for security in this demo
-                        login(email, existingStudent.name);
+                        login(normalizedEmail, existingStudent.name);
                         navigate('/dashboard');
                     } else {
                         // Whitelisted but no account -> Prompt to register
@@ -106,7 +104,7 @@ const LoginPage: React.FC = () => {
         } catch (error) {
             if (error instanceof z.ZodError) {
                 const errors: Record<string, string> = {};
-                const zodError = error;
+                const zodError = error as z.ZodError;
                 if (zodError.errors && Array.isArray(zodError.errors)) {
                     zodError.errors.forEach(err => {
                         if (err.path[0]) {
