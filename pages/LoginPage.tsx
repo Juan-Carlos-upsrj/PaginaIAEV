@@ -13,14 +13,14 @@ const LoginPage: React.FC = () => {
     const [name, setName] = useState('');
     const [isRegistering, setIsRegistering] = useState(false);
     const [formErrors, setFormErrors] = useState<Record<string, string>>({});
+    const [generalError, setGeneralError] = useState<string | null>(null);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        console.log("Submit pressed"); // DEBUG
         setFormErrors({});
+        setGeneralError(null);
 
         try {
-            console.log("Validating data...", { email, password, name }); // DEBUG
             // Validate input
             const validatedData = loginSchema.parse({
                 email: sanitizeInput(email),
@@ -28,40 +28,35 @@ const LoginPage: React.FC = () => {
                 name: isRegistering ? sanitizeInput(name) : undefined
             });
 
-            console.log("Validation success", validatedData); // DEBUG
-
             // Simulate login/register
             const userName = validatedData.name || validatedData.email.split('@')[0];
             login(validatedData.email, userName);
-            console.log("Login called"); // DEBUG
 
             // Redirect based on role
             const isStudent = /^\d/.test(validatedData.email);
-            console.log("Is student?", isStudent); // DEBUG
             if (isStudent) {
-                console.log("Navigating to dashboard..."); // DEBUG
                 navigate('/dashboard');
             } else {
-                console.log("Navigating to admin..."); // DEBUG
                 navigate('/admin');
             }
         } catch (error) {
-            console.error("Catch block reached", error); // DEBUG
             if (error instanceof z.ZodError) {
                 const errors: Record<string, string> = {};
+                const zodError = error as z.ZodError;
                 // Safety check for error.errors
-                if (error.errors && Array.isArray(error.errors)) {
-                    error.errors.forEach(err => {
+                if (zodError.errors && Array.isArray(zodError.errors)) {
+                    zodError.errors.forEach(err => {
                         if (err.path[0]) {
                             errors[err.path[0] as string] = err.message;
                         }
                     });
                 }
                 setFormErrors(errors);
-                console.log("Form errors set", errors); // DEBUG
+                // Also set a general error to ensure visibility
+                setGeneralError("Por favor corrige los errores en el formulario.");
             } else {
                 console.error("Login error:", error);
-                alert("Ocurrió un error al iniciar sesión.");
+                setGeneralError("Ocurrió un error inesperado. Inténtalo de nuevo.");
             }
         }
     };
@@ -88,6 +83,22 @@ const LoginPage: React.FC = () => {
                         <p className="text-gray-500 dark:text-gray-400 font-medium">Ingresa tus credenciales para continuar</p>
                     </div>
 
+                    {generalError && (
+                        <div className="mb-6 p-4 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl flex items-start">
+                            <div className="flex-shrink-0">
+                                <svg className="h-5 w-5 text-red-500" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="ml-3">
+                                <h3 className="text-sm font-medium text-red-800 dark:text-red-200">Error</h3>
+                                <div className="mt-1 text-sm text-red-700 dark:text-red-300">
+                                    {generalError}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
                     <form onSubmit={handleSubmit} className="space-y-6">
                         {isRegistering && (
                             <div>
@@ -98,11 +109,13 @@ const LoginPage: React.FC = () => {
                                     type="text"
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
-                                    className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${formErrors.name ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}`}
+                                    className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${formErrors.name ? 'border-red-500 ring-2 ring-red-500/20' : 'border-gray-200 dark:border-gray-600'}`}
                                     placeholder="Tu nombre"
                                 />
                                 {formErrors.name && (
-                                    <p className="text-red-500 text-xs mt-1">{formErrors.name}</p>
+                                    <p className="text-red-500 text-xs mt-1 font-medium flex items-center">
+                                        <span className="mr-1">•</span> {formErrors.name}
+                                    </p>
                                 )}
                             </div>
                         )}
@@ -115,11 +128,13 @@ const LoginPage: React.FC = () => {
                                 type="email"
                                 value={email}
                                 onChange={(e) => setEmail(e.target.value)}
-                                className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${formErrors.email ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}`}
+                                className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${formErrors.email ? 'border-red-500 ring-2 ring-red-500/20' : 'border-gray-200 dark:border-gray-600'}`}
                                 placeholder="ej. 0000123@alumno.iaev.mx"
                             />
                             {formErrors.email && (
-                                <p className="text-red-500 text-xs mt-1">{formErrors.email}</p>
+                                <p className="text-red-500 text-xs mt-1 font-medium flex items-center">
+                                    <span className="mr-1">•</span> {formErrors.email}
+                                </p>
                             )}
                             <p className="text-xs text-gray-500 dark:text-gray-400 mt-1">
                                 Alumnos: Usar matrícula (ej. 0000...) | Docentes: Usar correo (ej. nombre@...)
@@ -134,11 +149,13 @@ const LoginPage: React.FC = () => {
                                 type="password"
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
-                                className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${formErrors.password ? 'border-red-500' : 'border-gray-200 dark:border-gray-600'}`}
+                                className={`w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border rounded-xl text-gray-900 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition-all ${formErrors.password ? 'border-red-500 ring-2 ring-red-500/20' : 'border-gray-200 dark:border-gray-600'}`}
                                 placeholder="••••••••"
                             />
                             {formErrors.password && (
-                                <p className="text-red-500 text-xs mt-1">{formErrors.password}</p>
+                                <p className="text-red-500 text-xs mt-1 font-medium flex items-center">
+                                    <span className="mr-1">•</span> {formErrors.password}
+                                </p>
                             )}
                         </div>
 
@@ -155,6 +172,7 @@ const LoginPage: React.FC = () => {
                             onClick={() => {
                                 setIsRegistering(!isRegistering);
                                 setFormErrors({});
+                                setGeneralError(null);
                             }}
                             className="text-sm text-blue-600 dark:text-blue-400 hover:underline transition-colors"
                         >
