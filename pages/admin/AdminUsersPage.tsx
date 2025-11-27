@@ -20,26 +20,41 @@ const AdminUsersPage: React.FC = () => {
     const [isAssigning, setIsAssigning] = useState(false);
     const [selectedTeacherId, setSelectedTeacherId] = useState<string | null>(null);
     const [searchTerm, setSearchTerm] = useState('');
+    const [selectedQuarter, setSelectedQuarter] = useState<number | 'all'>('all');
 
     // Flatten all subjects from all quarters for the search list
     const allSubjects = useMemo(() => {
-        const subjects: (Subject & { quarterName: string })[] = [];
+        const subjects: (Subject & { quarterName: string; quarterId: number })[] = [];
         quarters.forEach(q => {
             q.subjects.forEach(s => {
                 // Filter out English and Human Development subjects
                 const nameLower = s.name.toLowerCase();
                 if (!nameLower.includes('inglés') && !nameLower.includes('desarrollo humano')) {
-                    subjects.push({ ...s, quarterName: q.name });
+                    subjects.push({ ...s, quarterName: q.name, quarterId: q.id });
                 }
             });
         });
         return subjects;
     }, [quarters]);
 
-    const filteredSubjects = allSubjects.filter(subject =>
-        subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        subject.id.toLowerCase().includes(searchTerm.toLowerCase())
-    );
+    const filteredSubjects = allSubjects.filter(subject => {
+        const matchesSearch = subject.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            subject.id.toLowerCase().includes(searchTerm.toLowerCase());
+        const matchesQuarter = selectedQuarter === 'all' || subject.quarterId === selectedQuarter;
+        return matchesSearch && matchesQuarter;
+    });
+
+    // Group filtered subjects by quarter for display
+    const subjectsByQuarter = useMemo(() => {
+        const groups: Record<string, typeof filteredSubjects> = {};
+        filteredSubjects.forEach(subject => {
+            if (!groups[subject.quarterName]) {
+                groups[subject.quarterName] = [];
+            }
+            groups[subject.quarterName].push(subject);
+        });
+        return groups;
+    }, [filteredSubjects]);
 
     const handleCreateTeacher = (e: React.FormEvent) => {
         e.preventDefault();
@@ -57,17 +72,11 @@ const AdminUsersPage: React.FC = () => {
         setSelectedTeacherId(teacherId);
         setIsAssigning(true);
         setSearchTerm('');
+        setSelectedQuarter('all');
     };
 
     const handleAssignSubject = (subjectId: string) => {
         if (selectedTeacherId) {
-            // We use a simple hash or the subject ID itself as the "courseId" number for now, 
-            // since the system expects a number but subjects have string IDs (e.g., 'MAT101').
-            // To make it work with the existing type definition (number), we might need to adjust types.ts 
-            // or just hash it. For this demo, let's assume we can map string IDs to numbers or 
-            // temporarily cast it if the system is flexible, BUT `assignCourseToTeacher` expects a number.
-            // Let's generate a pseudo-random ID based on the string to keep it consistent.
-
             // Simple hash function for demo purposes
             let hash = 0;
             for (let i = 0; i < subjectId.length; i++) {
@@ -164,7 +173,20 @@ const AdminUsersPage: React.FC = () => {
                             </button>
                         </div>
 
-                        <div className="mb-4">
+                        <div className="mb-4 space-y-3">
+                            {/* Quarter Filter */}
+                            <select
+                                value={selectedQuarter}
+                                onChange={(e) => setSelectedQuarter(e.target.value === 'all' ? 'all' : Number(e.target.value))}
+                                className="w-full px-3 py-2 border rounded-xl dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none"
+                            >
+                                <option value="all">Todos los Cuatrimestres</option>
+                                {quarters.map(q => (
+                                    <option key={q.id} value={q.id}>{q.name}</option>
+                                ))}
+                            </select>
+
+                            {/* Search Bar */}
                             <div className="relative">
                                 <ion-icon name="search-outline" class="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></ion-icon>
                                 <input
@@ -177,24 +199,33 @@ const AdminUsersPage: React.FC = () => {
                             </div>
                         </div>
 
-                        <div className="flex-1 overflow-y-auto space-y-2 pr-2">
-                            {filteredSubjects.length > 0 ? (
-                                filteredSubjects.map(subject => (
-                                    <button
-                                        key={subject.id}
-                                        onClick={() => handleAssignSubject(subject.id)}
-                                        className="w-full text-left p-3 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-transparent hover:border-blue-100 dark:hover:border-blue-800 transition-all group"
-                                    >
-                                        <div className="flex justify-between items-start">
-                                            <div>
-                                                <h4 className="font-bold text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">{subject.name}</h4>
-                                                <p className="text-xs text-gray-500 dark:text-gray-400">{subject.id} • {subject.quarterName}</p>
-                                            </div>
-                                            <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded text-gray-600 dark:text-gray-300">
-                                                {subject.credits} Créditos
-                                            </span>
+                        <div className="flex-1 overflow-y-auto space-y-4 pr-2">
+                            {Object.keys(subjectsByQuarter).length > 0 ? (
+                                Object.entries(subjectsByQuarter).map(([quarterName, subjects]) => (
+                                    <div key={quarterName}>
+                                        <h3 className="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-2 sticky top-0 bg-white dark:bg-gray-800 py-1 z-10">
+                                            {quarterName}
+                                        </h3>
+                                        <div className="space-y-2">
+                                            {subjects.map(subject => (
+                                                <button
+                                                    key={subject.id}
+                                                    onClick={() => handleAssignSubject(subject.id)}
+                                                    className="w-full text-left p-3 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 border border-transparent hover:border-blue-100 dark:hover:border-blue-800 transition-all group"
+                                                >
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <h4 className="font-bold text-gray-800 dark:text-white group-hover:text-blue-600 dark:group-hover:text-blue-400">{subject.name}</h4>
+                                                            <p className="text-xs text-gray-500 dark:text-gray-400">{subject.id}</p>
+                                                        </div>
+                                                        <span className="px-2 py-1 bg-gray-100 dark:bg-gray-700 text-xs rounded text-gray-600 dark:text-gray-300">
+                                                            {subject.credits} Créditos
+                                                        </span>
+                                                    </div>
+                                                </button>
+                                            ))}
                                         </div>
-                                    </button>
+                                    </div>
                                 ))
                             ) : (
                                 <div className="text-center py-8 text-gray-500">

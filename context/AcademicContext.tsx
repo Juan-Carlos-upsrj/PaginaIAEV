@@ -87,6 +87,65 @@ const initialCurriculum: Quarter[] = [
             { id: 'WEB102', name: 'Backend y Bases de Datos', credits: 8, status: 'pending', quarter: 4 },
             { id: 'PROJ101', name: 'Proyecto Integrador I', credits: 10, status: 'pending', quarter: 4 }
         ]
+    },
+    {
+        id: 5,
+        name: 'Quinto Cuatrimestre',
+        status: 'future',
+        subjects: [
+            { id: 'HOU102', name: 'Houdini Avanzado: VFX', credits: 8, status: 'pending', quarter: 5 },
+            { id: 'GAME101', name: 'Motores de Videojuegos (Unreal)', credits: 8, status: 'pending', quarter: 5 },
+            { id: 'PROJ102', name: 'Proyecto Integrador II', credits: 10, status: 'pending', quarter: 5 }
+        ]
+    },
+    {
+        id: 6,
+        name: 'Sexto Cuatrimestre',
+        status: 'future',
+        subjects: [
+            { id: 'VR101', name: 'Realidad Virtual y Aumentada', credits: 8, status: 'pending', quarter: 6 },
+            { id: 'AI101', name: 'Inteligencia Artificial para Creativos', credits: 8, status: 'pending', quarter: 6 },
+            { id: 'MKT101', name: 'Marketing Digital', credits: 6, status: 'pending', quarter: 6 }
+        ]
+    },
+    {
+        id: 7,
+        name: 'Séptimo Cuatrimestre',
+        status: 'future',
+        subjects: [
+            { id: 'ANIM101', name: 'Animación de Personajes Avanzada', credits: 8, status: 'pending', quarter: 7 },
+            { id: 'COMP101', name: 'Composición Digital (Nuke)', credits: 8, status: 'pending', quarter: 7 },
+            { id: 'PORT101', name: 'Desarrollo de Portafolio', credits: 6, status: 'pending', quarter: 7 }
+        ]
+    },
+    {
+        id: 8,
+        name: 'Octavo Cuatrimestre',
+        status: 'future',
+        subjects: [
+            { id: 'SPEC101', name: 'Especialización Técnica I', credits: 8, status: 'pending', quarter: 8 },
+            { id: 'PROJ103', name: 'Pre-producción de Tesis', credits: 10, status: 'pending', quarter: 8 },
+            { id: 'ETH101', name: 'Ética Profesional', credits: 4, status: 'pending', quarter: 8 }
+        ]
+    },
+    {
+        id: 9,
+        name: 'Noveno Cuatrimestre',
+        status: 'future',
+        subjects: [
+            { id: 'SPEC102', name: 'Especialización Técnica II', credits: 8, status: 'pending', quarter: 9 },
+            { id: 'PROJ104', name: 'Producción de Tesis', credits: 12, status: 'pending', quarter: 9 },
+            { id: 'BUS101', name: 'Negocios para Creativos', credits: 6, status: 'pending', quarter: 9 }
+        ]
+    },
+    {
+        id: 10,
+        name: 'Décimo Cuatrimestre',
+        status: 'future',
+        subjects: [
+            { id: 'RES101', name: 'Estadía Profesional', credits: 20, status: 'pending', quarter: 10 },
+            { id: 'SEM101', name: 'Seminario de Titulación', credits: 5, status: 'pending', quarter: 10 }
+        ]
     }
 ];
 
