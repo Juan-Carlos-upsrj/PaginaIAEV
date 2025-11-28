@@ -27,61 +27,53 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ courseId, courseName }) =
     const [newPostContent, setNewPostContent] = useState('');
     const [filter, setFilter] = useState<'all' | 'course'>('all');
 
-    // Load posts from localStorage on mount
-    useEffect(() => {
-        const savedPosts = localStorage.getItem('iaev_community_posts');
-        if (savedPosts) {
-            setPosts(JSON.parse(savedPosts));
-        } else {
-            // Initial mock data
-            const initialPosts: Post[] = [
-                {
-                    id: 1,
-                    author: 'Ana García',
-                    avatar: 'https://i.pravatar.cc/150?u=ana',
-                    content: '¡Acabo de terminar el curso de Diseño Web! 🚀 Altamente recomendado para principiantes.',
-                    likes: 12,
-                    comments: 3,
-                    timeAgo: 'hace 2 horas',
-                    isLiked: false,
-                    courseId: 1,
-                    courseName: 'Diseño Web Moderno'
-                },
-                {
-                    id: 2,
-                    author: 'Carlos Ruiz',
-                    avatar: 'https://i.pravatar.cc/150?u=carlos',
-                    content: '¿Alguien tiene consejos para el renderizado en Houdini? Se me está complicando un poco la iluminación.',
-                    likes: 5,
-                    comments: 8,
-                    timeAgo: 'hace 5 horas',
-                    isLiked: false,
-                    courseId: 2,
-                    courseName: 'Introducción a Houdini'
-                }
-            ];
-            setPosts(initialPosts);
-            localStorage.setItem('iaev_community_posts', JSON.stringify(initialPosts));
+    const API_URL = import.meta.env.BASE_URL + 'iaev/api';
+
+    // Load posts from API
+    const fetchPosts = async () => {
+        if (!user) return;
+        try {
+            const url = new URL(`${API_URL}/community.php`, window.location.origin);
+            url.searchParams.append('action', 'get_posts');
+            url.searchParams.append('user_id', user.id.toString());
+            if (courseId) {
+                url.searchParams.append('course_id', courseId.toString());
+            }
+
+            const res = await fetch(url.toString());
+            const data = await res.json();
+            if (data.success) {
+                setPosts(data.posts);
+            }
+        } catch (error) {
+            console.error("Failed to fetch posts", error);
         }
-    }, []);
+    };
+
+    useEffect(() => {
+        fetchPosts();
+        // Poll for updates every 30 seconds
+        const interval = setInterval(fetchPosts, 30000);
+        return () => clearInterval(interval);
+    }, [user, courseId]);
 
     // Filter posts based on props and selection
     const displayedPosts = posts.filter(post => {
         if (courseId) {
-            // If we are in a specific course page, show only posts for this course
             return post.courseId === courseId;
         } else {
-            // If we are in the main community page
             if (filter === 'course') {
-                // Show only posts related to courses (mock logic: any post with a courseId)
-                return post.courseId !== undefined;
+                return post.courseId !== null;
             }
-            // 'all': Show everything
             return true;
         }
     });
 
-    const handleLike = (postId: number) => {
+    const handleLike = async (postId: number) => {
+        if (!user) return;
+
+        // Optimistic update
+        const originalPosts = [...posts];
         const updatedPosts = posts.map(post => {
             if (post.id === postId) {
                 return {
@@ -93,29 +85,46 @@ const CommunityPage: React.FC<CommunityPageProps> = ({ courseId, courseName }) =
             return post;
         });
         setPosts(updatedPosts);
-        localStorage.setItem('iaev_community_posts', JSON.stringify(updatedPosts));
+
+        try {
+            await fetch(`${API_URL}/community.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'like_post',
+                    user_id: user.id,
+                    post_id: postId
+                })
+            });
+        } catch (error) {
+            console.error("Failed to like post", error);
+            setPosts(originalPosts); // Revert on error
+        }
     };
 
-    const handleCreatePost = () => {
+    const handleCreatePost = async () => {
         if (!newPostContent.trim() || !user) return;
 
-        const newPost: Post = {
-            id: Date.now(),
-            author: user.name,
-            avatar: `https://ui-avatars.com/api/?name=${user.name}&background=random`,
-            content: newPostContent,
-            likes: 0,
-            comments: 0,
-            timeAgo: 'ahora mismo',
-            isLiked: false,
-            courseId: courseId, // Assign to current course if provided
-            courseName: courseName
-        };
+        try {
+            const res = await fetch(`${API_URL}/community.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'create_post',
+                    user_id: user.id,
+                    content: newPostContent,
+                    course_id: courseId || null
+                })
+            });
 
-        const updatedPosts = [newPost, ...posts];
-        setPosts(updatedPosts);
-        localStorage.setItem('iaev_community_posts', JSON.stringify(updatedPosts));
-        setNewPostContent('');
+            const data = await res.json();
+            if (data.success) {
+                setNewPostContent('');
+                fetchPosts(); // Refresh list
+            }
+        } catch (error) {
+            console.error("Failed to create post", error);
+        }
     };
 
     if (!user) return null;
