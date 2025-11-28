@@ -22,8 +22,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [loading, setLoading] = useState(true);
 
     // API URL - assuming relative path works if deployed to same domain
-    // If base is /iaev/, then /iaev/api/ works.
-    const API_URL = import.meta.env.BASE_URL + 'api';
+    // If base is /iaev/, then /iaev/iaev/api/ works.
+    const API_URL = import.meta.env.BASE_URL + 'iaev/api';
 
     useEffect(() => {
         checkSession();

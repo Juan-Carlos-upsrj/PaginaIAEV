@@ -2,7 +2,7 @@
 // Database Configuration
 define('DB_HOST', 'localhost');
 define('DB_NAME', 'bloombox_iaev');
-define('DB_USER', 'iaev');
+define('DB_USER', 'bloombox_iaev');
 define('DB_PASS', 'antigravity03A');
 
 // CORS Configuration (Allow requests from your domain)

@@ -47,3 +47,10 @@ CREATE TABLE IF NOT EXISTS assigned_courses (
     PRIMARY KEY (user_id, course_id),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
+
+-- Create Authorized Emails Table
+CREATE TABLE IF NOT EXISTS authorized_emails (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

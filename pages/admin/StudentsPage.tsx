@@ -1,5 +1,6 @@
 import React from 'react';
 import { useUser } from '../../context/UserContext';
+import { useAcademic } from '../../context/AcademicContext';
 
 interface Student {
     id: string;
@@ -51,12 +52,18 @@ const mockStudents: Student[] = [
 ];
 
 const StudentsPage: React.FC = () => {
-    const { user } = useUser();
+    const { students } = useAcademic();
 
-    // Merge mock students with current user if they are a student (for demo purposes)
-    const allStudents = [...mockStudents];
-
-    // In a real app, we would fetch this from a database
+    // Transform UserProfile to the display format expected by the table
+    const allStudents = students.map(s => ({
+        id: s.id,
+        name: s.name,
+        email: s.email,
+        enrolledCourses: 4, // Mock value as we don't track enrollments fully yet
+        progress: Math.min(100, (s.level || 1) * 5), // Estimate progress based on level
+        lastActive: 'Reciente',
+        status: 'active' as const
+    }));
 
     return (
         <div className="max-w-6xl mx-auto">

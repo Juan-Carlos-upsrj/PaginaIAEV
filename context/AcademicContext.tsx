@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useUser } from './UserContext';
 import { UserProfile, Group, AcademicRecord } from '../types';
-import { useLocalStorage } from '../hooks/useLocalStorage';
+// Removed useLocalStorage import
 
 export interface Subject {
     id: string;
@@ -165,10 +165,42 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [progress, setProgress] = useState(0);
 
     // Admin State
-    const [teachers, setTeachers] = useLocalStorage<UserProfile[]>('teachers', []);
-    const [students, setStudents] = useLocalStorage<UserProfile[]>('students_v2', []); // Resetting DB
-    const [allowedEmails, setAllowedEmails] = useLocalStorage<string[]>('allowed_emails', []);
-    const [groups, setGroups] = useLocalStorage<string[]>('groups', ['A', 'B', 'C', 'D']);
+    // Admin State
+    const [teachers, setTeachers] = useState<UserProfile[]>([]); // TODO: Fetch from API
+    const [students, setStudents] = useState<UserProfile[]>([]);
+    const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
+    const [groups, setGroups] = useState<string[]>(['A', 'B', 'C', 'D']); // TODO: Fetch from API
+
+    const API_URL = import.meta.env.BASE_URL + 'iaev/api';
+
+    useEffect(() => {
+        fetchStudents();
+        fetchAuthorizedEmails();
+    }, []);
+
+    const fetchStudents = async () => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php?action=get_students`);
+            const data = await res.json();
+            if (data.success) {
+                setStudents(data.students);
+            }
+        } catch (error) {
+            console.error("Failed to fetch students", error);
+        }
+    };
+
+    const fetchAuthorizedEmails = async () => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php?action=get_authorized_emails`);
+            const data = await res.json();
+            if (data.success) {
+                setAllowedEmails(data.emails);
+            }
+        } catch (error) {
+            console.error("Failed to fetch authorized emails", error);
+        }
+    };
 
     // Load curriculum based on user profile
     useEffect(() => {
@@ -225,26 +257,31 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         setTeachers([...teachers, newTeacher]);
     };
 
-    const authorizeStudent = (email: string) => {
-        const normalizedEmail = email.trim().toLowerCase();
-        if (!allowedEmails.includes(normalizedEmail)) {
-            setAllowedEmails([...allowedEmails, normalizedEmail]);
+    const authorizeStudent = async (email: string) => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'authorize_email', email })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchAuthorizedEmails();
+            } else {
+                console.error("Failed to authorize email:", data.message);
+                alert(data.message || "Error al autorizar email");
+            }
+        } catch (error) {
+            console.error("Error authorizing student", error);
         }
     };
 
-    const createStudent = (studentData: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'assignedCourses'>) => {
-        const newStudent: UserProfile = {
-            ...studentData,
-            id: `student-${Date.now()}`,
-            role: 'student',
-            achievements: [],
-            completedLessons: [],
-            completedQuizzes: [],
-            xp: 0,
-            level: 1,
-            // cuatrimestre and group are passed in studentData
-        };
-        setStudents([...students, newStudent]);
+    const createStudent = async (studentData: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'assignedCourses'>) => {
+        // This function might be redundant if registration handles creation, 
+        // but if we want to manually create a student from admin panel:
+        console.warn("Manual student creation from admin not yet fully implemented in backend. Use registration flow.");
+        // For now, we can just refresh the list if we assume it was created elsewhere
+        fetchStudents();
     };
 
     const assignCourseToTeacher = (teacherId: string, courseId: number) => {
