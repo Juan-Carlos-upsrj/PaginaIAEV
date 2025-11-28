@@ -1,11 +1,12 @@
-import React, { createContext, useContext } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { UserProfile, Achievement } from '../types';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 
 interface UserContextType {
     user: UserProfile | null;
-    login: (email: string, name: string) => void;
-    logout: () => void;
+    loading: boolean;
+    login: (email: string, name: string, password?: string) => Promise<boolean | void>;
+    logout: () => Promise<void>;
+    register: (userData: any) => Promise<boolean | void>;
     addXp: (amount: number) => void;
     completeLesson: (lessonId: number) => void;
     completeQuiz: (quizId: number, score: number) => void;
@@ -14,132 +15,163 @@ interface UserContextType {
     switchProfile: (profileId: string) => void;
 }
 
-const AVAILABLE_ACHIEVEMENTS: Achievement[] = [
-    { id: 'first_lesson', title: 'Primeros Pasos', description: 'Completa tu primera lección', icon: 'footsteps-outline' },
-    { id: 'quiz_master', title: 'Cerebrito', description: 'Obtén 100% en un quiz', icon: 'bulb-outline' },
-    { id: 'level_5', title: 'Dedicado', description: 'Alcanza el nivel 5', icon: 'star-outline' }
-];
-
 const UserContext = createContext<UserContextType | undefined>(undefined);
 
 export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [user, setUser, removeUser] = useLocalStorage<UserProfile | null>('iaev_user', null);
+    const [user, setUser] = useState<UserProfile | null>(null);
+    const [loading, setLoading] = useState(true);
 
-    const login = (email: string, name: string) => {
-        // Determine role based on env var allowlist
-        const adminEmails = import.meta.env.VITE_ADMIN_EMAILS?.split(',') || [];
-        // Fallback for dev/demo if env not set, though ideally should be in .env
-        const defaultAdmins = ['admin@iaev.mx', 'profesor@iaev.mx'];
-        const allAdmins = [...adminEmails, ...defaultAdmins];
+    // API URL - assuming relative path works if deployed to same domain
+    // If base is /iaev/, then /iaev/api/ works.
+    const API_URL = import.meta.env.BASE_URL + 'api';
 
-        const isTeacher = allAdmins.some(admin => admin.trim().toLowerCase() === email.toLowerCase());
-        const role = isTeacher ? 'teacher' : 'student';
+    useEffect(() => {
+        checkSession();
+    }, []);
 
-        // Generate a simple ID based on email
-        const id = email.toLowerCase().replace(/[^a-z0-9]/g, '');
+    const checkSession = async () => {
+        try {
+            const res = await fetch(`${API_URL}/auth.php?action=check_session`);
+            const data = await res.json();
+            if (data.success) {
+                setUser(data.user);
+            }
+        } catch (error) {
+            console.error("Session check failed", error);
+        } finally {
+            setLoading(false);
+        }
+    };
 
-        const newUser: UserProfile = {
-            id,
-            name,
-            email,
-            role,
-            xp: 0,
-            level: 1,
-            cuatrimestre: 1, // Default to 1st cuatrimestre
-            achievements: [],
-            completedLessons: [],
-            completedQuizzes: [],
-            assignedCourses: []
+    const login = async (email: string, name: string, password?: string) => {
+        try {
+            if (password) {
+                const res = await fetch(`${API_URL}/auth.php`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ action: 'login', email, password })
+                });
+                const data = await res.json();
+
+                if (data.success) {
+                    setUser(data.user);
+                    return true;
+                } else {
+                    throw new Error(data.message || 'Login failed');
+                }
+            } else {
+                console.warn("Login called without password - legacy mode not supported in backend");
+                return false;
+            }
+        } catch (error) {
+            console.error("Login error", error);
+            throw error;
+        }
+    };
+
+    const register = async (userData: any) => {
+        try {
+            const res = await fetch(`${API_URL}/auth.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'register', ...userData })
+            });
+            const data = await res.json();
+            if (data.success) {
+                setUser(data.user);
+                return true;
+            } else {
+                throw new Error(data.message || 'Registration failed');
+            }
+        } catch (error) {
+            console.error("Registration error", error);
+            throw error;
+        }
+    };
+
+    const logout = async () => {
+        try {
+            await fetch(`${API_URL}/auth.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'logout' })
+            });
+            setUser(null);
+        } catch (error) {
+            console.error("Logout error", error);
+        }
+    };
+
+    const addXp = async (amount: number) => {
+        if (!user) return;
+
+        const newXp = user.xp + amount;
+        const newLevel = Math.floor(newXp / 100) + 1;
+        const levelUp = newLevel > user.level;
+
+        if (levelUp) {
+            alert(`¡Subiste de nivel! Ahora eres Nivel ${newLevel}`);
+        }
+
+        const updatedUser = { ...user, xp: newXp, level: newLevel };
+        setUser(updatedUser);
+
+        try {
+            await fetch(`${API_URL}/progress.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'update_xp', userId: user.id, xp: newXp, level: newLevel })
+            });
+        } catch (error) {
+            console.error("Failed to sync XP", error);
+        }
+    };
+
+    const completeLesson = async (lessonId: number) => {
+        if (!user) return;
+        if (user.completedLessons.includes(lessonId)) return;
+
+        const updatedUser = {
+            ...user,
+            completedLessons: [...user.completedLessons, lessonId]
         };
-        setUser(newUser);
-    };
+        setUser(updatedUser);
 
-    const logout = () => {
-        removeUser();
-    };
+        addXp(50);
 
-    const checkAchievements = (currentUser: UserProfile) => {
-        const newAchievements = [...currentUser.achievements];
-        let updated = false;
-
-        // Check First Lesson
-        if (currentUser.completedLessons.length > 0 && !newAchievements.find(a => a.id === 'first_lesson')) {
-            const achievement = AVAILABLE_ACHIEVEMENTS.find(a => a.id === 'first_lesson');
-            if (achievement) {
-                newAchievements.push({ ...achievement, unlockedAt: new Date().toISOString() });
-                updated = true;
-                alert(`¡Logro Desbloqueado! ${achievement.title}`);
-            }
+        try {
+            await fetch(`${API_URL}/progress.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'complete_lesson', userId: user.id, lessonId })
+            });
+        } catch (error) {
+            console.error("Failed to sync lesson", error);
         }
+    };
 
-        // Check Level 5
-        if (currentUser.level >= 5 && !newAchievements.find(a => a.id === 'level_5')) {
-            const achievement = AVAILABLE_ACHIEVEMENTS.find(a => a.id === 'level_5');
-            if (achievement) {
-                newAchievements.push({ ...achievement, unlockedAt: new Date().toISOString() });
-                updated = true;
-                alert(`¡Logro Desbloqueado! ${achievement.title}`);
-            }
+    const completeQuiz = async (quizId: number, score: number) => {
+        if (!user) return;
+        if (user.completedQuizzes.includes(quizId)) return;
+
+        const updatedUser = {
+            ...user,
+            completedQuizzes: [...user.completedQuizzes, quizId]
+        };
+        setUser(updatedUser);
+
+        const xpEarned = score * 10;
+        addXp(xpEarned);
+
+        try {
+            await fetch(`${API_URL}/progress.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'complete_quiz', userId: user.id, quizId, score })
+            });
+        } catch (error) {
+            console.error("Failed to sync quiz", error);
         }
-
-        return updated ? newAchievements : null;
-    };
-
-    const addXp = (amount: number) => {
-        if (!user) return;
-        setUser(prev => {
-            if (!prev) return null;
-            const newXp = prev.xp + amount;
-            const newLevel = Math.floor(newXp / 100) + 1;
-            const levelUp = newLevel > prev.level;
-
-            if (levelUp) {
-                alert(`¡Subiste de nivel! Ahora eres Nivel ${newLevel}`);
-            }
-
-            const updatedUser = { ...prev, xp: newXp, level: newLevel };
-            const newAchievements = checkAchievements(updatedUser);
-
-            return newAchievements ? { ...updatedUser, achievements: newAchievements } : updatedUser;
-        });
-    };
-
-    const completeLesson = (lessonId: number) => {
-        if (!user) return;
-        setUser(prev => {
-            if (!prev) return null;
-            if (prev.completedLessons.includes(lessonId)) return prev;
-
-            const updatedUser = {
-                ...prev,
-                completedLessons: [...prev.completedLessons, lessonId]
-            };
-
-            // Add XP for lesson completion
-            setTimeout(() => addXp(50), 0);
-
-            const newAchievements = checkAchievements(updatedUser);
-            return newAchievements ? { ...updatedUser, achievements: newAchievements } : updatedUser;
-        });
-    };
-
-    const completeQuiz = (quizId: number, score: number) => {
-        if (!user) return;
-        setUser(prev => {
-            if (!prev) return null;
-            if (prev.completedQuizzes.includes(quizId)) return prev;
-
-            const updatedUser = {
-                ...prev,
-                completedQuizzes: [...prev.completedQuizzes, quizId]
-            };
-
-            // Add XP based on score
-            const xpEarned = score * 10;
-            setTimeout(() => addXp(xpEarned), 0);
-
-            return updatedUser;
-        });
     };
 
     const assignCourse = (courseId: number) => {
@@ -147,7 +179,6 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         setUser(prev => {
             if (!prev) return null;
             if (prev.assignedCourses?.includes(courseId)) return prev;
-
             return {
                 ...prev,
                 assignedCourses: [...(prev.assignedCourses || []), courseId]
@@ -164,21 +195,12 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     };
 
     const switchProfile = async (profileId: string) => {
-        // Dynamic import to avoid circular dependencies
-        const { MOCK_PROFILES } = await import('../data/mockProfiles');
-        const mockProfile = MOCK_PROFILES.find(p => p.id === profileId);
-
-        if (mockProfile) {
-            setUser(mockProfile.user);
-            // Force reload to ensure all contexts update (simple way to reset state)
-            // In a real app we might want to reset contexts more gracefully
-            window.location.reload();
-        }
+        console.warn("Switch profile not supported in backend mode");
     };
 
     return (
-        <UserContext.Provider value={{ user, login, logout, addXp, completeLesson, completeQuiz, assignCourse, updateProfile, switchProfile }}>
-            {children}
+        <UserContext.Provider value={{ user, loading, login, logout, register, addXp, completeLesson, completeQuiz, assignCourse, updateProfile, switchProfile }}>
+            {!loading && children}
         </UserContext.Provider>
     );
 };

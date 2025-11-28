@@ -1,5 +1,4 @@
-import * as React from 'react';
-import { useState } from 'react';
+import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useUser } from '../context/UserContext';
 import { useAcademic } from '../context/AcademicContext';
@@ -8,13 +7,13 @@ import { z } from 'zod';
 
 const LoginPage: React.FC = () => {
     const navigate = useNavigate();
-    const { login } = useUser();
-    const { allowedEmails, createStudent, students } = useAcademic();
+    const { login, register } = useUser();
+    const { allowedEmails, createStudent, students, groups } = useAcademic();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
     const [name, setName] = useState('');
     const [cuatrimestre, setCuatrimestre] = useState(1);
-    const [group, setGroup] = useState<'A' | 'B' | 'C' | 'D'>('A');
+    const [group, setGroup] = useState(groups[0] || 'A');
 
     // "isRegistering" now means "Completing Registration" for whitelisted students
     const [isRegistering, setIsRegistering] = useState(false);
@@ -22,7 +21,7 @@ const LoginPage: React.FC = () => {
     const [generalError, setGeneralError] = useState<string | null>(null);
     const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         setFormErrors({});
         setGeneralError(null);
@@ -35,89 +34,52 @@ const LoginPage: React.FC = () => {
                 return;
             }
 
-            // Check if it's a student email (starts with number) or teacher (starts with letter)
-            const isStudentEmail = /^\d/.test(email);
+            const normalizedEmail = email.trim().toLowerCase();
 
-            if (isStudentEmail) {
-                // Student Logic
-                const normalizedEmail = email.trim().toLowerCase();
-                if (!allowedEmails.includes(normalizedEmail)) {
-                    setGeneralError("Este correo no está autorizado. Contacta al administrador.");
+            if (isRegistering) {
+                if (!name) {
+                    setFormErrors({ name: "El nombre es requerido." });
                     return;
                 }
 
-                const existingStudent = students.find(s => s.email === normalizedEmail);
-
-                if (isRegistering) {
-                    // Completing registration
-                    if (existingStudent) {
-                        setGeneralError("Ya existe una cuenta con este correo. Inicia sesión.");
-                        setIsRegistering(false);
-                        return;
-                    }
-
-                    if (!name) {
-                        setFormErrors({ name: "El nombre es requerido." });
-                        return;
-                    }
-
-                    // Create the student account
-                    createStudent({
-                        name: sanitizeInput(name),
+                // Register
+                try {
+                    await register({
                         email: normalizedEmail,
+                        password,
+                        name: sanitizeInput(name),
                         cuatrimestre,
-                        group,
-                        avatar: `https://ui-avatars.com/api/?name=${name}&background=random`
+                        role: /^\d/.test(normalizedEmail) ? 'student' : 'teacher'
                     });
-
-                    // Auto login
-                    login(normalizedEmail, name);
                     navigate('/dashboard');
-
-                } else {
-                    // Login attempt
-                    if (existingStudent) {
-                        // Check password (mock check)
-                        login(normalizedEmail, existingStudent.name);
-                        navigate('/dashboard');
-                    } else {
-                        // Whitelisted but no account -> Prompt to register
-                        setSuccessMessage("¡Alumno autorizado encontrado! Por favor completa tu registro.");
-                        setIsRegistering(true);
-                    }
+                } catch (error: any) {
+                    setGeneralError(error.message || "Error al registrar.");
                 }
 
             } else {
-                // Teacher/Admin Logic (Legacy/Mock)
-                // Validate input using schema
-                const validatedData = loginSchema.parse({
-                    email: sanitizeInput(email),
-                    password: password,
-                    name: isRegistering ? sanitizeInput(name) : undefined
-                });
-
-                const userName = validatedData.name || validatedData.email.split('@')[0];
-                login(validatedData.email, userName);
-                navigate('/admin');
+                // Login
+                try {
+                    await login(normalizedEmail, name || 'User', password);
+                    navigate('/dashboard');
+                } catch (error: any) {
+                    // If user not found and it's a student email, check if allowed to register
+                    const isStudentEmail = /^\d/.test(normalizedEmail);
+                    if (error.message === 'User not found' && isStudentEmail) {
+                        if (allowedEmails.includes(normalizedEmail)) {
+                            setSuccessMessage("¡Alumno autorizado encontrado! Por favor completa tu registro.");
+                            setIsRegistering(true);
+                        } else {
+                            setGeneralError("Este correo no está autorizado o no existe.");
+                        }
+                    } else {
+                        setGeneralError(error.message || "Error al iniciar sesión.");
+                    }
+                }
             }
 
         } catch (error) {
-            if (error instanceof z.ZodError) {
-                const errors: Record<string, string> = {};
-                const zodError = error as z.ZodError;
-                if (zodError.errors && Array.isArray(zodError.errors)) {
-                    zodError.errors.forEach(err => {
-                        if (err.path[0]) {
-                            errors[err.path[0] as string] = err.message;
-                        }
-                    });
-                }
-                setFormErrors(errors);
-                setGeneralError("Por favor corrige los errores en el formulario.");
-            } else {
-                console.error("Login error:", error);
-                setGeneralError("Ocurrió un error inesperado.");
-            }
+            console.error("Auth error:", error);
+            setGeneralError("Ocurrió un error inesperado.");
         }
     };
 
@@ -212,13 +174,12 @@ const LoginPage: React.FC = () => {
                                         <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Grupo</label>
                                         <select
                                             value={group}
-                                            onChange={e => setGroup(e.target.value as 'A' | 'B' | 'C' | 'D')}
+                                            onChange={e => setGroup(e.target.value)}
                                             className="w-full px-4 py-3 bg-gray-50 dark:bg-gray-900/50 border border-gray-200 dark:border-gray-600 rounded-xl text-gray-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500"
                                         >
-                                            <option value="A">A</option>
-                                            <option value="B">B</option>
-                                            <option value="C">C</option>
-                                            <option value="D">D</option>
+                                            {groups.map(g => (
+                                                <option key={g} value={g}>{g}</option>
+                                            ))}
                                         </select>
                                     </div>
                                 </div>

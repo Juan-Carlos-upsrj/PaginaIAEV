@@ -82,7 +82,7 @@ export interface Achievement {
   unlockedAt?: string;
 }
 
-export type Group = 'A' | 'B' | 'C' | 'D';
+export type Group = string;
 
 export interface Grade {
   courseId: number;

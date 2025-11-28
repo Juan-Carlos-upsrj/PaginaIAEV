@@ -43,6 +43,11 @@ interface AcademicContextType {
     authorizeStudent: (email: string) => void;
     assignCourseToTeacher: (teacherId: string, courseId: number) => void;
     getGlobalStats: (filter?: { group?: Group; cuatrimestre?: number }) => GlobalStats;
+
+    // Group Management
+    groups: string[];
+    addGroup: (name: string) => void;
+    removeGroup: (name: string) => void;
 }
 
 const AcademicContext = createContext<AcademicContextType | undefined>(undefined);
@@ -163,6 +168,7 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [teachers, setTeachers] = useLocalStorage<UserProfile[]>('teachers', []);
     const [students, setStudents] = useLocalStorage<UserProfile[]>('students_v2', []); // Resetting DB
     const [allowedEmails, setAllowedEmails] = useLocalStorage<string[]>('allowed_emails', []);
+    const [groups, setGroups] = useLocalStorage<string[]>('groups', ['A', 'B', 'C', 'D']);
 
     // Load curriculum based on user profile
     useEffect(() => {
@@ -253,6 +259,17 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }));
     };
 
+    const addGroup = (name: string) => {
+        const normalized = name.trim().toUpperCase();
+        if (!groups.includes(normalized)) {
+            setGroups([...groups, normalized].sort());
+        }
+    };
+
+    const removeGroup = (name: string) => {
+        setGroups(groups.filter(g => g !== name));
+    };
+
     const getGlobalStats = (filter?: { group?: Group; cuatrimestre?: number }): GlobalStats => {
         // Mock calculation - in a real app this would aggregate from all students
         // For demo purposes, we return static or semi-random data based on filters
@@ -293,7 +310,10 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             createStudent,
             authorizeStudent,
             assignCourseToTeacher,
-            getGlobalStats
+            getGlobalStats,
+            groups,
+            addGroup,
+            removeGroup
         }}>
             {children}
         </AcademicContext.Provider>
