@@ -18,9 +18,10 @@ const ProfilePage: React.FC = () => {
 
     if (!user) return null;
 
-    const completedCoursesCount = courses.filter(c =>
-        c.modules.every(m => m.lessons.every(l => user.completedLessons.includes(l.id)))
-    ).length;
+    const completedCoursesCount = courses.filter(c => {
+        const totalLessons = c.modules.reduce((acc, m) => acc + m.lessons.length, 0);
+        return totalLessons > 0 && c.modules.every(m => m.lessons.every(l => user.completedLessons.includes(l.id)));
+    }).length;
 
     const totalLearningHours = Math.round((user.completedLessons.length * 15) / 60);
 
