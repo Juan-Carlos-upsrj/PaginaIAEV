@@ -4,6 +4,13 @@ import ReactDOM from 'react-dom/client';
 import './src/index.css';
 import App from './App';
 
+// Redirect to correct basename if needed
+const basename = '/iaev';
+if (!window.location.pathname.startsWith(basename)) {
+  const newPath = basename + (window.location.pathname === '/' ? '' : window.location.pathname) + window.location.search + window.location.hash;
+  window.location.replace(newPath);
+}
+
 const rootElement = document.getElementById('root');
 if (!rootElement) {
   throw new Error("Could not find root element to mount to");
