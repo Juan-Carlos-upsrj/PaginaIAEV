@@ -56,24 +56,23 @@ const initialCurriculum: Quarter[] = [
     {
         id: 1,
         name: 'Primer Cuatrimestre',
-        status: 'completed',
-        average: 9.2,
+        status: 'current',
         subjects: [
-            { id: 'MAT101', name: 'Matemáticas para Ingeniería', credits: 8, grade: 9.5, status: 'completed', quarter: 1 },
-            { id: 'PRO101', name: 'Fundamentos de Programación', credits: 8, grade: 9.0, status: 'completed', quarter: 1 },
-            { id: 'DIS101', name: 'Introducción al Diseño Digital', credits: 6, grade: 9.2, status: 'completed', quarter: 1 },
-            { id: 'ING101', name: 'Inglés I', credits: 5, grade: 9.0, status: 'completed', quarter: 1 }
+            { id: 'MAT101', name: 'Matemáticas para Ingeniería', credits: 8, status: 'enrolled', quarter: 1 },
+            { id: 'PRO101', name: 'Fundamentos de Programación', credits: 8, status: 'enrolled', quarter: 1 },
+            { id: 'DIS101', name: 'Introducción al Diseño Digital', credits: 6, status: 'enrolled', quarter: 1 },
+            { id: 'ING101', name: 'Inglés I', credits: 5, status: 'enrolled', quarter: 1 }
         ]
     },
     {
         id: 2,
         name: 'Segundo Cuatrimestre',
-        status: 'current',
+        status: 'future',
         subjects: [
-            { id: 'PRO102', name: 'Programación Orientada a Objetos', credits: 8, status: 'enrolled', quarter: 2 },
-            { id: '3D101', name: 'Modelado 3D Básico', credits: 8, status: 'enrolled', quarter: 2 },
-            { id: 'FIS101', name: 'Física para Animación', credits: 6, status: 'enrolled', quarter: 2 },
-            { id: 'ING102', name: 'Inglés II', credits: 5, status: 'enrolled', quarter: 2 }
+            { id: 'PRO102', name: 'Programación Orientada a Objetos', credits: 8, status: 'pending', quarter: 2 },
+            { id: '3D101', name: 'Modelado 3D Básico', credits: 8, status: 'pending', quarter: 2 },
+            { id: 'FIS101', name: 'Física para Animación', credits: 6, status: 'pending', quarter: 2 },
+            { id: 'ING102', name: 'Inglés II', credits: 5, status: 'pending', quarter: 2 }
         ]
     },
     {
