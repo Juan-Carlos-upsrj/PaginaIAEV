@@ -52,17 +52,56 @@ const mockStudents: Student[] = [
 ];
 
 const StudentsPage: React.FC = () => {
-    const { students } = useAcademic();
+    const { students, refreshStudents } = useAcademic();
+    const API_URL = import.meta.env.BASE_URL + 'iaev/api';
+
+    const handleStatusChange = async (userId: number, newStatus: string) => {
+        if (!confirm(`¿Estás seguro de cambiar el estado a ${newStatus}?`)) return;
+        try {
+            const res = await fetch(`${API_URL}/admin.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'update_user_status', user_id: userId, status: newStatus })
+            });
+            const data = await res.json();
+            if (data.success) {
+                refreshStudents();
+            } else {
+                alert('Error al actualizar estado: ' + data.message);
+            }
+        } catch (error) {
+            console.error("Failed to update status", error);
+        }
+    };
+
+    const handleDelete = async (userId: number) => {
+        if (!confirm('¿Estás seguro de eliminar este usuario? Esta acción no se puede deshacer.')) return;
+        try {
+            const res = await fetch(`${API_URL}/admin.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete_user', user_id: userId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                refreshStudents();
+            } else {
+                alert('Error al eliminar usuario: ' + data.message);
+            }
+        } catch (error) {
+            console.error("Failed to delete user", error);
+        }
+    };
 
     // Transform UserProfile to the display format expected by the table
     const allStudents = students.map(s => ({
         id: s.id,
         name: s.name,
         email: s.email,
-        enrolledCourses: 4, // Mock value as we don't track enrollments fully yet
-        progress: Math.min(100, (s.level || 1) * 5), // Estimate progress based on level
+        enrolledCourses: 0, // TODO: Fetch real enrollment count
+        progress: Math.min(100, (s.level || 1) * 5),
         lastActive: 'Reciente',
-        status: 'active' as const
+        status: s.status || 'active'
     }));
 
     return (
@@ -92,7 +131,7 @@ const StudentsPage: React.FC = () => {
                     </div>
                     <div>
                         <p className="text-gray-500 text-sm font-medium">Total Estudiantes</p>
-                        <h3 className="text-2xl font-bold text-gray-800">{allStudents.length + 120}</h3>
+                        <h3 className="text-2xl font-bold text-gray-800">{allStudents.length}</h3>
                     </div>
                 </div>
                 <div className="glass p-6 rounded-2xl flex items-center gap-4">
@@ -100,8 +139,8 @@ const StudentsPage: React.FC = () => {
                         <ion-icon name="pulse"></ion-icon>
                     </div>
                     <div>
-                        <p className="text-gray-500 text-sm font-medium">Activos Hoy</p>
-                        <h3 className="text-2xl font-bold text-gray-800">45</h3>
+                        <p className="text-gray-500 text-sm font-medium">Activos</p>
+                        <h3 className="text-2xl font-bold text-gray-800">{allStudents.filter(s => s.status === 'active').length}</h3>
                     </div>
                 </div>
                 <div className="glass p-6 rounded-2xl flex items-center gap-4">
@@ -109,8 +148,8 @@ const StudentsPage: React.FC = () => {
                         <ion-icon name="trophy"></ion-icon>
                     </div>
                     <div>
-                        <p className="text-gray-500 text-sm font-medium">Tasa de Finalización</p>
-                        <h3 className="text-2xl font-bold text-gray-800">85%</h3>
+                        <p className="text-gray-500 text-sm font-medium">Suspendidos</p>
+                        <h3 className="text-2xl font-bold text-gray-800">{allStudents.filter(s => s.status === 'suspended').length}</h3>
                     </div>
                 </div>
             </div>
@@ -135,7 +174,7 @@ const StudentsPage: React.FC = () => {
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Estudiante</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">ID</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Cursos</th>
-                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Progreso Promedio</th>
+                                <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Progreso</th>
                                 <th className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Estado</th>
                                 <th className="px-6 py-4 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Acciones</th>
                             </tr>
@@ -172,14 +211,35 @@ const StudentsPage: React.FC = () => {
                                         </div>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap">
-                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${student.status === 'active' ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-800'
+                                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${student.status === 'active' ? 'bg-green-100 text-green-800' :
+                                                student.status === 'suspended' ? 'bg-yellow-100 text-yellow-800' : 'bg-red-100 text-red-800'
                                             }`}>
-                                            {student.status === 'active' ? 'Activo' : 'Inactivo'}
+                                            {student.status === 'active' ? 'Activo' : student.status === 'suspended' ? 'Suspendido' : 'Inactivo'}
                                         </span>
                                     </td>
                                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                                        <button className="text-blue-600 hover:text-blue-900 mr-3">Ver Perfil</button>
-                                        <button className="text-gray-400 hover:text-red-600">
+                                        {student.status === 'active' ? (
+                                            <button
+                                                onClick={() => handleStatusChange(student.id, 'suspended')}
+                                                className="text-yellow-600 hover:text-yellow-900 mr-3"
+                                                title="Suspender"
+                                            >
+                                                <ion-icon name="pause-outline"></ion-icon>
+                                            </button>
+                                        ) : (
+                                            <button
+                                                onClick={() => handleStatusChange(student.id, 'active')}
+                                                className="text-green-600 hover:text-green-900 mr-3"
+                                                title="Activar"
+                                            >
+                                                <ion-icon name="play-outline"></ion-icon>
+                                            </button>
+                                        )}
+                                        <button
+                                            onClick={() => handleDelete(student.id)}
+                                            className="text-gray-400 hover:text-red-600"
+                                            title="Eliminar"
+                                        >
                                             <ion-icon name="trash-outline"></ion-icon>
                                         </button>
                                     </td>
@@ -189,7 +249,7 @@ const StudentsPage: React.FC = () => {
                     </table>
                 </div>
                 <div className="p-4 border-t border-white/20 flex justify-between items-center text-sm text-gray-500">
-                    <span>Mostrando {allStudents.length} de {allStudents.length + 120} estudiantes</span>
+                    <span>Mostrando {allStudents.length} estudiantes</span>
                     <div className="flex gap-2">
                         <button className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50 disabled:opacity-50" disabled>Anterior</button>
                         <button className="px-3 py-1 border border-gray-200 rounded-lg hover:bg-gray-50">Siguiente</button>

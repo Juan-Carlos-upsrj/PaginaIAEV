@@ -8,6 +8,7 @@ CREATE TABLE IF NOT EXISTS users (
     xp INT DEFAULT 0,
     level INT DEFAULT 1,
     cuatrimestre INT DEFAULT 1,
+    status VARCHAR(20) DEFAULT 'active', -- 'active', 'suspended', 'deleted'
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
@@ -73,4 +74,39 @@ CREATE TABLE IF NOT EXISTS post_likes (
     PRIMARY KEY (post_id, user_id),
     FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- Create Courses Table
+CREATE TABLE IF NOT EXISTS courses (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    subtitle VARCHAR(255),
+    description TEXT,
+    thumbnail VARCHAR(255),
+    cuatrimestre INT DEFAULT 1,
+    status VARCHAR(20) DEFAULT 'active', -- 'active', 'archived', 'deleted'
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Create Modules Table
+CREATE TABLE IF NOT EXISTS modules (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    course_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    order_index INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (course_id) REFERENCES courses(id) ON DELETE CASCADE
+);
+
+-- Create Lessons Table
+CREATE TABLE IF NOT EXISTS lessons (
+    id VARCHAR(50) PRIMARY KEY, -- Using string ID to match existing frontend logic (e.g., 'MAT101-1')
+    module_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    duration VARCHAR(20), -- e.g., '10 min'
+    video_url VARCHAR(255),
+    content TEXT,
+    order_index INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (module_id) REFERENCES modules(id) ON DELETE CASCADE
 );

@@ -58,57 +58,82 @@ const CourseProgressUpdater: React.FC<{
 };
 
 export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const [courses, setCourses] = useLocalStorage<Course[]>('iaev_courses', initialCourseData);
-    const [summaries, setSummaries] = useLocalStorage<CourseSummary[]>('iaev_summaries', dashboardCourses || []);
+    const [courses, setCourses] = React.useState<Course[]>([]);
+    const [summaries, setSummaries] = React.useState<CourseSummary[]>([]);
+    const API_URL = import.meta.env.BASE_URL + 'iaev/api';
 
-    // Merge new static data if needed
-    useEffect(() => {
-        const existingIds = new Set(courses.map(c => c.id));
-        const newCourses = initialCourseData.filter(c => !existingIds.has(c.id));
-
-        const safeDashboardCourses = dashboardCourses || [];
-        const newSummaries = safeDashboardCourses.filter(s => !existingIds.has(s.id));
-
-        if (newCourses.length > 0) {
-            setCourses(prev => [...prev, ...newCourses]);
-            setSummaries(prev => [...prev, ...newSummaries]);
-        }
-    }, []); // Run once on mount
-
-    const addCourse = (newCourse: Course) => {
-        const newSummary: CourseSummary = {
-            id: newCourse.id,
-            title: newCourse.title,
-            subtitle: newCourse.description.substring(0, 100) + '...', // Simple summary generation
-            progress: 0,
-            status: 'new',
-            thumbnail: newCourse.thumbnail
-        };
-
-        setCourses(prev => [...prev, newCourse]);
-        setSummaries(prev => [...prev, newSummary]);
-    };
-
-    const updateCourse = (updatedCourse: Course) => {
-        setCourses(prev => prev.map(c => c.id === updatedCourse.id ? updatedCourse : c));
-
-        // Also update summary if title/desc changed
-        setSummaries(prev => prev.map(s => {
-            if (s.id === updatedCourse.id) {
-                return {
-                    ...s,
-                    title: updatedCourse.title,
-                    subtitle: updatedCourse.description.substring(0, 100) + '...',
-                    thumbnail: updatedCourse.thumbnail
-                };
+    const fetchCourses = async () => {
+        try {
+            const res = await fetch(`${API_URL}/courses.php?action=get_courses`);
+            const data = await res.json();
+            if (data.success) {
+                setCourses(data.courses);
+                // Generate summaries from fetched courses
+                const newSummaries: CourseSummary[] = data.courses.map((c: Course) => ({
+                    id: c.id,
+                    title: c.title,
+                    subtitle: c.subtitle || '',
+                    progress: 0, // Calculated by CourseProgressUpdater
+                    status: c.status === 'active' ? 'new' : 'archived',
+                    thumbnail: c.thumbnail
+                }));
+                setSummaries(newSummaries);
             }
-            return s;
-        }));
+        } catch (error) {
+            console.error("Failed to fetch courses", error);
+        }
     };
 
-    const deleteCourse = (courseId: number) => {
-        setCourses(prev => prev.filter(c => c.id !== courseId));
-        setSummaries(prev => prev.filter(s => s.id !== courseId));
+    useEffect(() => {
+        fetchCourses();
+    }, []);
+
+    const addCourse = async (newCourse: Course) => {
+        try {
+            const res = await fetch(`${API_URL}/courses.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'create_course', ...newCourse })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchCourses();
+            }
+        } catch (error) {
+            console.error("Failed to add course", error);
+        }
+    };
+
+    const updateCourse = async (updatedCourse: Course) => {
+        try {
+            const res = await fetch(`${API_URL}/courses.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'update_course', ...updatedCourse })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchCourses();
+            }
+        } catch (error) {
+            console.error("Failed to update course", error);
+        }
+    };
+
+    const deleteCourse = async (courseId: number) => {
+        try {
+            const res = await fetch(`${API_URL}/courses.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'delete_course', id: courseId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchCourses();
+            }
+        } catch (error) {
+            console.error("Failed to delete course", error);
+        }
     };
 
     const getCourse = (id: number) => courses.find(c => c.id === id);

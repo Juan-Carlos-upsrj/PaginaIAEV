@@ -28,7 +28,7 @@ $pdo->exec("CREATE TABLE IF NOT EXISTS authorized_emails (
 
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     if ($action === 'get_students') {
-        $stmt = $pdo->prepare("SELECT id, name, email, role, xp, level, cuatrimestre, created_at FROM users WHERE role = 'student'");
+        $stmt = $pdo->prepare("SELECT id, name, email, role, xp, level, cuatrimestre, status, created_at FROM users WHERE role = 'student'");
         $stmt->execute();
         $students = $stmt->fetchAll();
         echo json_encode(['success' => true, 'students' => $students]);
@@ -62,6 +62,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             } else {
                 echo json_encode(['success' => false, 'message' => 'Database error']);
             }
+        }
+    } elseif ($action === 'update_user_status') {
+        $userId = $data->user_id;
+        $status = $data->status; // 'active', 'suspended'
+        
+        $stmt = $pdo->prepare("UPDATE users SET status = ? WHERE id = ?");
+        if ($stmt->execute([$status, $userId])) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to update status']);
+        }
+    } elseif ($action === 'delete_user') {
+        $userId = $data->user_id;
+        
+        // Hard delete to clean up all related data via CASCADE
+        $stmt = $pdo->prepare("DELETE FROM users WHERE id = ?");
+        if ($stmt->execute([$userId])) {
+            echo json_encode(['success' => true]);
+        } else {
+            echo json_encode(['success' => false, 'message' => 'Failed to delete user']);
         }
     }
 }
