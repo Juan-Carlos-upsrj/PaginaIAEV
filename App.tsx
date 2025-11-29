@@ -25,9 +25,9 @@ const ProfilePage = React.lazy(() => import('./pages/ProfilePage'));
 
 // Lazy Loaded Admin Pages
 const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
-const AdminUsersPage = React.lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminTeachersPage = React.lazy(() => import('./pages/admin/AdminUsersPage'));
+const AdminStudentsPage = React.lazy(() => import('./pages/admin/AdminStudentsPage'));
 const CourseEditor = React.lazy(() => import('./pages/admin/CourseEditor'));
-const StudentsPage = React.lazy(() => import('./pages/admin/StudentsPage'));
 const AnalyticsPage = React.lazy(() => import('./pages/admin/AnalyticsPage'));
 
 // Loading Component
@@ -66,10 +66,10 @@ const AppRoutes: React.FC = () => {
         {/* Admin Routes */}
         <Route path="/admin" element={isAuthenticated && isTeacher ? <AdminLayout /> : <Navigate to="/login" />}>
           <Route index element={<AdminDashboard />} />
-          <Route path="users" element={<AdminUsersPage />} />
+          <Route path="teachers" element={<AdminTeachersPage />} />
+          <Route path="students" element={<AdminStudentsPage />} />
           <Route path="course/new" element={<CourseEditor />} />
           <Route path="course/:courseId" element={<CourseEditor />} />
-          <Route path="students" element={<StudentsPage />} />
           <Route path="analytics" element={<AnalyticsPage />} />
         </Route>
 

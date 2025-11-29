@@ -13,13 +13,28 @@ const CalendarPage: React.FC = () => {
     const { user } = useUser();
     const [currentDate, setCurrentDate] = useState(new Date());
 
-    // Mock events
-    const events: CalendarEvent[] = [
-        { id: 1, title: 'Entrega Proyecto Final', date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 15), type: 'assignment', course: 'Programación Orientada a Objetos' },
-        { id: 2, title: 'Examen Parcial', date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 20), type: 'quiz', course: 'Física para Animación' },
-        { id: 3, title: 'Clase en Vivo: Rigging', date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 10), type: 'class', course: 'Modelado 3D Básico' },
-        { id: 4, title: 'Entrega de Ensayo', date: new Date(currentDate.getFullYear(), currentDate.getMonth(), 25), type: 'assignment', course: 'Inglés II' },
-    ];
+    const [events, setEvents] = useState<CalendarEvent[]>([]);
+    const API_URL = import.meta.env.BASE_URL + 'api';
+
+    useEffect(() => {
+        fetchEvents();
+    }, []);
+
+    const fetchEvents = async () => {
+        try {
+            const res = await fetch(`${API_URL}/student.php?action=get_calendar_events`);
+            const data = await res.json();
+            if (data.success) {
+                const formattedEvents = data.events.map((e: any) => ({
+                    ...e,
+                    date: new Date(e.date)
+                }));
+                setEvents(formattedEvents);
+            }
+        } catch (error) {
+            console.error("Failed to fetch events", error);
+        }
+    };
 
     const daysInMonth = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 0).getDate();
     const firstDayOfMonth = new Date(currentDate.getFullYear(), currentDate.getMonth(), 1).getDay();
@@ -100,8 +115,8 @@ const CalendarPage: React.FC = () => {
                                     <div className="space-y-1">
                                         {dayEvents.map(event => (
                                             <div key={event.id} className={`text-[10px] sm:text-xs p-1.5 rounded-lg border truncate ${event.type === 'assignment' ? 'bg-red-50 text-red-700 border-red-100' :
-                                                    event.type === 'quiz' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
-                                                        'bg-blue-50 text-blue-700 border-blue-100'
+                                                event.type === 'quiz' ? 'bg-yellow-50 text-yellow-700 border-yellow-100' :
+                                                    'bg-blue-50 text-blue-700 border-blue-100'
                                                 }`} title={event.title}>
                                                 {event.title}
                                             </div>

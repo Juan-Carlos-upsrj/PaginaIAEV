@@ -21,9 +21,8 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<UserProfile | null>(null);
     const [loading, setLoading] = useState(true);
 
-    // API URL - assuming relative path works if deployed to same domain
-    // If base is /iaev/, then /iaev/iaev/api/ works.
-    const API_URL = import.meta.env.BASE_URL + 'iaev/api';
+    // API URL - relative to base path
+    const API_URL = import.meta.env.BASE_URL + 'api';
 
     useEffect(() => {
         checkSession();
@@ -32,6 +31,7 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const checkSession = async () => {
         try {
             const res = await fetch(`${API_URL}/auth.php?action=check_session`);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             const data = await res.json();
             if (data.success) {
                 setUser(data.user);
@@ -186,12 +186,32 @@ export const UserProvider: React.FC<{ children: React.ReactNode }> = ({ children
         });
     };
 
-    const updateProfile = (data: Partial<UserProfile>) => {
+    const updateProfile = async (data: Partial<UserProfile>) => {
         if (!user) return;
+
+        // Optimistic update
         setUser(prev => {
             if (!prev) return null;
             return { ...prev, ...data };
         });
+
+        try {
+            await fetch(`${API_URL}/student.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_profile',
+                    user_id: user.id,
+                    name: data.name || user.name,
+                    bio: data.bio || user.bio,
+                    avatar: data.avatar || user.avatar,
+                    social_links: data.socialLinks || user.socialLinks
+                })
+            });
+        } catch (error) {
+            console.error("Failed to update profile", error);
+            checkSession(); // Revert on error
+        }
     };
 
     const switchProfile = async (profileId: string) => {

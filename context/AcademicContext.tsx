@@ -1,7 +1,6 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { useUser } from './UserContext';
 import { UserProfile, Group, AcademicRecord } from '../types';
-// Removed useLocalStorage import
 
 export interface Subject {
     id: string;
@@ -48,10 +47,14 @@ interface AcademicContextType {
     groups: string[];
     addGroup: (name: string) => void;
     removeGroup: (name: string) => void;
+    updateGroup: (oldName: string, newName: string) => void;
+    updateTeacher: (teacher: UserProfile) => void;
+    updateStudent: (student: UserProfile) => void;
 }
 
 const AcademicContext = createContext<AcademicContextType | undefined>(undefined);
 
+// Default curriculum structure (still hardcoded structure, but grades/status will be dynamic in future)
 const initialCurriculum: Quarter[] = [
     {
         id: 1,
@@ -164,28 +167,50 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     const [progress, setProgress] = useState(0);
 
     // Admin State
-    // Admin State
-    const [teachers, setTeachers] = useState<UserProfile[]>([]); // TODO: Fetch from API
+    const [teachers, setTeachers] = useState<UserProfile[]>([]);
     const [students, setStudents] = useState<UserProfile[]>([]);
     const [allowedEmails, setAllowedEmails] = useState<string[]>([]);
-    const [groups, setGroups] = useState<string[]>(['A', 'B', 'C', 'D']); // TODO: Fetch from API
+    const [groups, setGroups] = useState<string[]>([]);
+    const [globalStats, setGlobalStats] = useState<GlobalStats>({
+        averageAttendance: 0,
+        averageGrade: 0,
+        totalStudents: 0,
+        activeCourses: 0
+    });
 
-    const API_URL = import.meta.env.BASE_URL + 'iaev/api';
+    const API_URL = import.meta.env.BASE_URL + 'api';
 
     useEffect(() => {
         fetchStudents();
+        fetchTeachers();
         fetchAuthorizedEmails();
+        fetchGroups();
+        fetchGlobalStats();
     }, []);
 
     const fetchStudents = async () => {
         try {
             const res = await fetch(`${API_URL}/admin.php?action=get_students`);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             const data = await res.json();
             if (data.success) {
                 setStudents(data.students);
             }
         } catch (error) {
             console.error("Failed to fetch students", error);
+        }
+    };
+
+    const fetchTeachers = async () => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php?action=get_teachers`);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
+            const data = await res.json();
+            if (data.success) {
+                setTeachers(data.teachers);
+            }
+        } catch (error) {
+            console.error("Failed to fetch teachers", error);
         }
     };
 
@@ -201,19 +226,36 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         }
     };
 
+    const fetchGroups = async () => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php?action=get_groups`);
+            const data = await res.json();
+            if (data.success) {
+                setGroups(data.groups);
+            }
+        } catch (error) {
+            console.error("Failed to fetch groups", error);
+        }
+    };
+
+    const fetchGlobalStats = async () => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php?action=get_global_stats`);
+            const data = await res.json();
+            if (data.success) {
+                setGlobalStats(data.stats);
+            }
+        } catch (error) {
+            console.error("Failed to fetch global stats", error);
+        }
+    };
+
     // Load curriculum based on user profile
     useEffect(() => {
         if (user) {
-            // Dynamic import to avoid circular dependencies if any, though here it's fine
-            import('../data/mockProfiles').then(({ MOCK_PROFILES }) => {
-                const mockProfile = MOCK_PROFILES.find(p => p.id === user.id);
-                if (mockProfile) {
-                    setQuarters(mockProfile.curriculum);
-                } else {
-                    // Reset to default if not a mock profile (or load from real backend in future)
-                    setQuarters(initialCurriculum);
-                }
-            });
+            // In a real app, we would fetch the user's grades here and update the curriculum status
+            // For now, we keep the static structure but this is where we'd merge with API data
+            setQuarters(initialCurriculum);
         }
     }, [user]);
 
@@ -240,20 +282,10 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     }, [quarters]);
 
     // Admin Functions
-    const createTeacher = (teacherData: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'cuatrimestre'>) => {
-        const newTeacher: UserProfile = {
-            ...teacherData,
-            id: `teacher-${Date.now()}`,
-            role: 'teacher',
-            achievements: [],
-            completedLessons: [],
-            completedQuizzes: [],
-            xp: 0,
-            level: 1,
-            cuatrimestre: 0, // Teachers don't have a cuatrimestre
-            assignedCourses: []
-        };
-        setTeachers([...teachers, newTeacher]);
+    const createTeacher = async (teacherData: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'cuatrimestre'>) => {
+        // This usually happens via registration, but if we add manual creation:
+        console.warn("Manual teacher creation not implemented in backend yet.");
+        // We would call an API endpoint here
     };
 
     const authorizeStudent = async (email: string) => {
@@ -267,7 +299,6 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             if (data.success) {
                 fetchAuthorizedEmails();
             } else {
-                console.error("Failed to authorize email:", data.message);
                 alert(data.message || "Error al autorizar email");
             }
         } catch (error) {
@@ -276,59 +307,134 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     };
 
     const createStudent = async (studentData: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'assignedCourses'>) => {
-        // This function might be redundant if registration handles creation, 
-        // but if we want to manually create a student from admin panel:
         console.warn("Manual student creation from admin not yet fully implemented in backend. Use registration flow.");
-        // For now, we can just refresh the list if we assume it was created elsewhere
         fetchStudents();
     };
 
-    const assignCourseToTeacher = (teacherId: string, courseId: number) => {
-        setTeachers(teachers.map(t => {
-            if (t.id === teacherId) {
-                const currentCourses = t.assignedCourses || [];
-                if (!currentCourses.includes(courseId)) {
-                    return { ...t, assignedCourses: [...currentCourses, courseId] };
-                }
+    const assignCourseToTeacher = async (teacherId: string, courseId: number) => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'assign_course',
+                    teacher_id: teacherId,
+                    course_id: courseId
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchTeachers(); // Refresh to show assignment
+            } else {
+                alert(data.message || "Error al asignar curso");
             }
-            return t;
-        }));
-    };
-
-    const addGroup = (name: string) => {
-        const normalized = name.trim().toUpperCase();
-        if (!groups.includes(normalized)) {
-            setGroups([...groups, normalized].sort());
+        } catch (error) {
+            console.error("Error assigning course", error);
         }
     };
 
-    const removeGroup = (name: string) => {
-        setGroups(groups.filter(g => g !== name));
+    const addGroup = async (name: string) => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'add_group', name })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchGroups();
+            }
+        } catch (error) {
+            console.error("Error adding group", error);
+        }
+    };
+
+    const removeGroup = async (name: string) => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'remove_group', name })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchGroups();
+            }
+        } catch (error) {
+            console.error("Error removing group", error);
+        }
+    };
+
+    const updateGroup = async (oldName: string, newName: string) => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_group',
+                    old_name: oldName,
+                    new_name: newName
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchGroups();
+                fetchStudents(); // Refresh students as their group might have changed
+            }
+        } catch (error) {
+            console.error("Error updating group", error);
+        }
+    };
+
+    const updateTeacher = async (updatedTeacher: UserProfile) => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_teacher',
+                    id: updatedTeacher.id,
+                    name: updatedTeacher.name,
+                    email: updatedTeacher.email,
+                    bio: updatedTeacher.bio
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchTeachers();
+            }
+        } catch (error) {
+            console.error("Error updating teacher", error);
+        }
+    };
+
+    const updateStudent = async (updatedStudent: UserProfile) => {
+        try {
+            const res = await fetch(`${API_URL}/admin.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    action: 'update_student',
+                    id: updatedStudent.id,
+                    name: updatedStudent.name,
+                    email: updatedStudent.email,
+                    cuatrimestre: updatedStudent.cuatrimestre,
+                    group_name: updatedStudent.group
+                })
+            });
+            const data = await res.json();
+            if (data.success) {
+                fetchStudents();
+            }
+        } catch (error) {
+            console.error("Error updating student", error);
+        }
     };
 
     const getGlobalStats = (filter?: { group?: Group; cuatrimestre?: number }): GlobalStats => {
-        // Mock calculation - in a real app this would aggregate from all students
-        // For demo purposes, we return static or semi-random data based on filters
-
-        let baseAttendance = 85;
-        let baseGrade = 8.5;
-
-        if (filter?.cuatrimestre) {
-            baseAttendance += (filter.cuatrimestre % 2 === 0) ? 5 : -2;
-            baseGrade += (filter.cuatrimestre === 1) ? 0.5 : -0.2;
-        }
-
-        if (filter?.group) {
-            if (filter.group === 'A') baseGrade += 0.3;
-            if (filter.group === 'B') baseAttendance -= 5;
-        }
-
-        return {
-            averageAttendance: Math.min(100, Math.max(0, baseAttendance)),
-            averageGrade: Math.min(10, Math.max(0, baseGrade)),
-            totalStudents: 120, // Mock total
-            activeCourses: 15
-        };
+        // In a real app we would pass filters to the API
+        // For now returning the fetched global stats
+        return globalStats;
     };
 
     const currentQuarter = quarters.find(q => q.status === 'current');
@@ -349,7 +455,10 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             getGlobalStats,
             groups,
             addGroup,
-            removeGroup
+            removeGroup,
+            updateGroup,
+            updateTeacher,
+            updateStudent
         }}>
             {children}
         </AcademicContext.Provider>
@@ -363,3 +472,4 @@ export const useAcademic = () => {
     }
     return context;
 };
+

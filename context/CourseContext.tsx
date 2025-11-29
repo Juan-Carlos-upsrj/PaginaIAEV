@@ -1,7 +1,5 @@
 import React, { createContext, useContext, useEffect } from 'react';
-import { dashboardCourses, courseData as initialCourseData } from '../data/courses';
 import type { Course, CourseSummary } from '../types';
-import { useLocalStorage } from '../hooks/useLocalStorage';
 import { useUser } from './UserContext';
 
 interface CourseContextType {
@@ -60,11 +58,12 @@ const CourseProgressUpdater: React.FC<{
 export const CourseProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
     const [courses, setCourses] = React.useState<Course[]>([]);
     const [summaries, setSummaries] = React.useState<CourseSummary[]>([]);
-    const API_URL = import.meta.env.BASE_URL + 'iaev/api';
+    const API_URL = import.meta.env.BASE_URL + 'api';
 
     const fetchCourses = async () => {
         try {
             const res = await fetch(`${API_URL}/courses.php?action=get_courses`);
+            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
             const data = await res.json();
             if (data.success) {
                 setCourses(data.courses);
