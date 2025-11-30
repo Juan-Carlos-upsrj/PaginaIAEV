@@ -1,8 +1,9 @@
 import React, { useState, useMemo, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useCourses } from '../context/CourseContext';
-import { useUser } from '../context/UserContext';
-import { useBookmarks } from '../context/BookmarkContext';
+import { useCourses } from '../context/CoursesContext';
+import { useAuth } from '../context/AuthContext';
+// import { useBookmarks } from '../context/BookmarkContext';
+import { useProgress } from '../hooks/useProgress';
 import QuizComponent from '../components/QuizComponent';
 import CommunityPage from './CommunityPage';
 import Confetti from '../components/Confetti';
@@ -11,8 +12,9 @@ const CoursePage: React.FC = () => {
   const { courseId } = useParams<{ courseId: string }>();
   const navigate = useNavigate();
   const { getCourse } = useCourses();
-  const { user, completeQuiz, completeLesson } = useUser();
-  const { addBookmark, removeBookmark, isBookmarked } = useBookmarks();
+  const { user } = useAuth();
+  const { completeLesson, completeQuiz } = useProgress();
+  // const { addBookmark, removeBookmark, isBookmarked } = useBookmarks();
 
   const course = useMemo(() => {
     return getCourse(Number(courseId));
@@ -51,13 +53,14 @@ const CoursePage: React.FC = () => {
     if (currentLesson && currentLesson.quiz) {
       const percentage = score / total;
       if (percentage >= 0.8) {
-        completeQuiz(currentLesson.quiz.id, score);
+        completeQuiz(currentLesson.quiz.id, score, total);
         setShowConfetti(true);
         setTimeout(() => setShowConfetti(false), 5000);
       }
     }
   }, [currentLesson, completeQuiz]);
 
+  /*
   const toggleBookmark = useCallback(() => {
     if (!currentLesson || !course) return;
 
@@ -72,6 +75,7 @@ const CoursePage: React.FC = () => {
       });
     }
   }, [currentLesson, course, isBookmarked, removeBookmark, addBookmark]);
+  */
 
   if (!course) {
     return (
@@ -178,16 +182,7 @@ const CoursePage: React.FC = () => {
                 Foro del Curso
               </button>
             </div>
-
-            {!showCommunity && currentLesson && (
-              <button
-                onClick={toggleBookmark}
-                className={`p-2 rounded-full transition-colors ${isBookmarked(currentLesson.id) ? 'bg-yellow-100 text-yellow-500' : 'hover:bg-gray-100 text-gray-400'}`}
-                title={isBookmarked(currentLesson.id) ? "Quitar marcador" : "Marcar lección"}
-              >
-                <ion-icon name={isBookmarked(currentLesson.id) ? "bookmark" : "bookmark-outline"} class="text-xl"></ion-icon>
-              </button>
-            )}
+            {/* Bookmark button removed */}
           </div>
         </div>
 

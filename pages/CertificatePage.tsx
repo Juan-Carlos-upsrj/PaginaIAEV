@@ -1,11 +1,11 @@
 import React, { useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { useUser } from '../context/UserContext';
-import { useCourses } from '../context/CourseContext';
+import { useAuth } from '../context/AuthContext';
+import { useCourses } from '../context/CoursesContext';
 
 const CertificatePage: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
-    const { user } = useUser();
+    const { user } = useAuth();
     const { getCourse } = useCourses();
     const navigate = useNavigate();
     const certificateRef = useRef<HTMLDivElement>(null);
