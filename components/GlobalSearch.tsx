@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCourses } from '../context/CourseContext';
+import { useCourses } from '../context/CoursesContext';
 
 const GlobalSearch: React.FC = () => {
     const [query, setQuery] = useState('');

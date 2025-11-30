@@ -1,22 +1,24 @@
 import React, { useState } from 'react';
-import { useUser } from '../context/UserContext';
-import { useCourses } from '../context/CourseContext';
+import { useAuth } from '../context/AuthContext';
+import { useCourses } from '../context/CoursesContext';
 
 const ProfilePage: React.FC = () => {
-    const { user, updateProfile, switchProfile } = useUser();
+    const { user, updateUserProgress } = useAuth();
     const { courses } = useCourses();
     const [isEditing, setIsEditing] = useState(false);
-    const [formData, setFormData] = useState({
-        name: user?.name || '',
-        bio: user?.bio || '',
-        avatar: user?.avatar || '',
-        twitter: user?.socialLinks?.twitter || '',
-        linkedin: user?.socialLinks?.linkedin || '',
-        github: user?.socialLinks?.github || '',
-        website: user?.socialLinks?.website || ''
-    });
 
+    // Safety check for user
     if (!user) return null;
+
+    const [formData, setFormData] = useState({
+        name: user.name || '',
+        bio: user.bio || '',
+        avatar: user.avatar || '',
+        twitter: user.socialLinks?.twitter || '',
+        linkedin: user.socialLinks?.linkedin || '',
+        github: user.socialLinks?.github || '',
+        website: user.socialLinks?.website || ''
+    });
 
     const completedCoursesCount = courses.filter(c => {
         const totalLessons = c.modules.reduce((acc, m) => acc + m.lessons.length, 0);
@@ -26,7 +28,7 @@ const ProfilePage: React.FC = () => {
     const totalLearningHours = Math.round((user.completedLessons.length * 15) / 60);
 
     const handleSave = () => {
-        updateProfile({
+        updateUserProgress({
             name: formData.name,
             bio: formData.bio,
             avatar: formData.avatar,
@@ -208,36 +210,7 @@ const ProfilePage: React.FC = () => {
 
                     </div>
                 </div>
-                {/* Dev Tools Section */}
-                <div className="bg-gray-800 text-white rounded-3xl p-8 shadow-xl border border-gray-700">
-                    <h3 className="text-xl font-bold mb-6 flex items-center gap-2">
-                        <ion-icon name="construct-outline" class="text-yellow-500"></ion-icon> Herramientas de Desarrollo
-                    </h3>
-                    <p className="text-gray-400 mb-4">Selecciona un perfil para probar diferentes escenarios de Kardex:</p>
-
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {['new_student', 'advanced_student', 'irregular_student'].map(profileId => {
-                            const labels: Record<string, string> = {
-                                'new_student': 'Nuevo Ingreso (1º Cuatri)',
-                                'advanced_student': 'Avanzado (4º Cuatri)',
-                                'irregular_student': 'Irregular (Reprobadas)'
-                            };
-
-                            return (
-                                <button
-                                    key={profileId}
-                                    onClick={() => switchProfile(profileId)}
-                                    className={`p-4 rounded-xl border transition-all text-left ${user.id === profileId
-                                        ? 'bg-blue-600 border-blue-500 shadow-lg shadow-blue-500/30'
-                                        : 'bg-gray-700 border-gray-600 hover:bg-gray-600'}`}
-                                >
-                                    <div className="font-bold">{labels[profileId]}</div>
-                                    <div className="text-xs text-gray-300 mt-1">ID: {profileId}</div>
-                                </button>
-                            );
-                        })}
-                    </div>
-                </div>
+                {/* Dev Tools removed */}
             </div>
         </div>
     );

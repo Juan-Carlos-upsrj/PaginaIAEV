@@ -7,6 +7,8 @@ const AdminStudentsPage: React.FC = () => {
         students,
         allowedEmails,
         authorizeStudent,
+        bulkAuthorizeStudents,
+        activateStudent,
         quarters,
         groups,
         addGroup,
@@ -22,6 +24,10 @@ const AdminStudentsPage: React.FC = () => {
     const [isCreating, setIsCreating] = useState(false);
     const [authEmail, setAuthEmail] = useState('');
 
+    // State for bulk import
+    const [isBulkImporting, setIsBulkImporting] = useState(false);
+    const [bulkEmails, setBulkEmails] = useState('');
+
     // State for creating group
     const [newGroup, setNewGroup] = useState('');
 
@@ -29,11 +35,21 @@ const AdminStudentsPage: React.FC = () => {
     const [editingStudent, setEditingStudent] = useState<UserProfile | null>(null);
     const [editingGroup, setEditingGroup] = useState<{ original: string, current: string } | null>(null);
 
-    const handleCreateUser = (e: React.FormEvent) => {
+    const handleCreateUser = async (e: React.FormEvent) => {
         e.preventDefault();
-        authorizeStudent(authEmail.trim().toLowerCase());
+        await authorizeStudent(authEmail.trim().toLowerCase());
         setAuthEmail('');
         setIsCreating(false);
+    };
+
+    const handleBulkImport = async (e: React.FormEvent) => {
+        e.preventDefault();
+        const emails = bulkEmails.split(/[\n,]+/).map(e => e.trim()).filter(e => e);
+        if (emails.length > 0) {
+            await bulkAuthorizeStudents(emails);
+            setBulkEmails('');
+            setIsBulkImporting(false);
+        }
     };
 
     const handleCreateGroup = (e: React.FormEvent) => {
@@ -60,6 +76,11 @@ const AdminStudentsPage: React.FC = () => {
         }
     };
 
+    const toggleStudentStatus = (student: UserProfile) => {
+        const newStatus = student.status === 'active' ? 'inactive' : 'active';
+        activateStudent(student.id, newStatus);
+    };
+
     return (
         <div className="p-6 max-w-7xl mx-auto">
             <div className="flex justify-between items-center mb-8">
@@ -68,6 +89,13 @@ const AdminStudentsPage: React.FC = () => {
                     <p className="text-gray-500 dark:text-gray-400 mt-1">Administra los estudiantes y grupos académicos.</p>
                 </div>
                 <div className="flex gap-2">
+                    <button
+                        onClick={() => { setActiveTab('students'); setIsBulkImporting(true); }}
+                        className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 shadow-lg shadow-blue-500/30"
+                    >
+                        <ion-icon name="cloud-upload-outline"></ion-icon>
+                        Importar CSV
+                    </button>
                     <button
                         onClick={() => { setActiveTab('students'); setIsCreating(true); }}
                         className="px-4 py-2 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors flex items-center gap-2 shadow-lg shadow-green-500/30"
@@ -164,30 +192,27 @@ const AdminStudentsPage: React.FC = () => {
                     </div>
 
                     {students.map((student) => (
-                        <div key={student.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow">
-                            <div className="flex items-start justify-between mb-4">
+                        <div key={student.id} className="bg-white dark:bg-gray-800 rounded-xl p-6 shadow-sm border border-gray-100 dark:border-gray-700 hover:shadow-md transition-shadow relative">
+                            {/* Status Indicator */}
+                            <div className="absolute top-4 right-4 flex gap-2">
+                                <button
+                                    onClick={() => toggleStudentStatus(student)}
+                                    className={`w-3 h-3 rounded-full ${student.status === 'active' ? 'bg-green-500' : 'bg-red-500'} ring-2 ring-offset-2 ring-white dark:ring-gray-800 hover:scale-125 transition-transform`}
+                                    title={student.status === 'active' ? 'Desactivar' : 'Activar'}
+                                ></button>
+                            </div>
+
+                            <div className="flex items-start justify-between mb-4 mt-2">
                                 <div className="flex items-center gap-3">
                                     <img
                                         src={student.avatar || `https://ui-avatars.com/api/?name=${student.name}`}
                                         alt={student.name}
-                                        className="w-12 h-12 rounded-full ring-2 ring-white dark:ring-gray-700 shadow-sm"
+                                        className={`w-12 h-12 rounded-full ring-2 shadow-sm ${student.status === 'active' ? 'ring-green-100 dark:ring-green-900' : 'ring-red-100 dark:ring-red-900 grayscale'}`}
                                     />
                                     <div>
                                         <h3 className="font-bold text-gray-900 dark:text-white">{student.name}</h3>
                                         <p className="text-sm text-gray-500 dark:text-gray-400">{student.email}</p>
                                     </div>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                    <button
-                                        onClick={() => setEditingStudent(student)}
-                                        className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
-                                        title="Editar estudiante"
-                                    >
-                                        <ion-icon name="create-outline" style={{ fontSize: '20px' }}></ion-icon>
-                                    </button>
-                                    <span className="px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-600 dark:text-green-400 text-xs rounded-full font-medium">
-                                        Estudiante
-                                    </span>
                                 </div>
                             </div>
 
@@ -200,6 +225,15 @@ const AdminStudentsPage: React.FC = () => {
                                     <p className="text-xs text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-1">Grupo</p>
                                     <p className="font-bold text-gray-900 dark:text-white">{student.group}</p>
                                 </div>
+                            </div>
+
+                            <div className="mt-4 pt-2 flex justify-end">
+                                <button
+                                    onClick={() => setEditingStudent(student)}
+                                    className="text-blue-600 hover:text-blue-800 text-sm font-medium flex items-center gap-1"
+                                >
+                                    <ion-icon name="create-outline"></ion-icon> Editar
+                                </button>
                             </div>
                         </div>
                     ))}
@@ -257,6 +291,49 @@ const AdminStudentsPage: React.FC = () => {
                                     className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
                                 >
                                     Autorizar
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* Bulk Import Modal */}
+            {isBulkImporting && (
+                <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 backdrop-blur-sm">
+                    <div className="bg-white dark:bg-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl border border-gray-100 dark:border-gray-700">
+                        <h2 className="text-xl font-bold mb-4 text-gray-900 dark:text-white">
+                            Importar Alumnos Masivamente
+                        </h2>
+                        <form onSubmit={handleBulkImport} className="space-y-4">
+                            <div className="bg-blue-50 dark:bg-blue-900/20 p-4 rounded-lg mb-4">
+                                <p className="text-sm text-blue-800 dark:text-blue-200">
+                                    Pega una lista de correos electrónicos separados por comas o saltos de línea.
+                                </p>
+                            </div>
+                            <div>
+                                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">Lista de Correos</label>
+                                <textarea
+                                    required
+                                    value={bulkEmails}
+                                    onChange={e => setBulkEmails(e.target.value)}
+                                    className="w-full px-3 py-2 border rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 outline-none h-40 font-mono text-sm"
+                                    placeholder="alumno1@iaev.mx&#10;alumno2@iaev.mx"
+                                />
+                            </div>
+                            <div className="flex justify-end gap-3 mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setIsBulkImporting(false)}
+                                    className="px-4 py-2 text-gray-600 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
+                                >
+                                    Cancelar
+                                </button>
+                                <button
+                                    type="submit"
+                                    className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
+                                >
+                                    Importar {bulkEmails.split(/[\n,]+/).filter(e => e.trim()).length} Correos
                                 </button>
                             </div>
                         </form>

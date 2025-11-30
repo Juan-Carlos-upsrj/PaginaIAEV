@@ -1,16 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useCourses } from '../../context/CourseContext';
+import { useCourses } from '../../context/CoursesContext';
+import { useAuth } from '../../context/AuthContext';
+import { api } from '../../utils/api';
 import type { Course, Module, Lesson, Quiz } from '../../types';
 import QuizBuilder from './QuizBuilder';
-
-import { useUser } from '../../context/UserContext';
 
 const CourseEditor: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
     const navigate = useNavigate();
-    const { getCourse, addCourse, updateCourse } = useCourses();
-    const { user, assignCourse } = useUser();
+    const { getCourse, refreshCourses } = useCourses();
+    const { user, updateUserProgress } = useAuth();
 
     const isNew = !courseId || courseId === 'new';
 
@@ -31,25 +31,35 @@ const CourseEditor: React.FC = () => {
             if (existingCourse) {
                 setFormData(existingCourse);
             } else {
-                navigate('/admin');
+                navigate('/admin'); // Redirect if course not found
             }
         }
     }, [courseId, isNew, getCourse, navigate]);
 
-    const handleSave = () => {
+    const handleSave = async () => {
         if (!formData.title) return alert('El título es obligatorio');
 
-        if (isNew) {
-            const newCourse = {
-                ...formData,
-                instructorId: user?.id // Assign current user as instructor
-            };
-            addCourse(newCourse);
-            assignCourse(newCourse.id); // Update user's assigned courses
-        } else {
-            updateCourse(formData);
+        try {
+            if (isNew) {
+                const newCourseData = {
+                    ...formData,
+                    instructorId: user?.id
+                };
+                const res = await api.createCourse(newCourseData);
+                await refreshCourses();
+
+                if (res.course && res.course.id && user) {
+                     updateUserProgress({ assignedCourses: [...(user.assignedCourses || []), res.course.id] });
+                }
+            } else {
+                await api.updateCourse(formData);
+                await refreshCourses();
+            }
+            navigate('/admin');
+        } catch (error) {
+            console.error(error);
+            alert('Error al guardar el curso');
         }
-        navigate('/admin');
     };
 
     const addModule = () => {
