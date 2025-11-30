@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useUser } from './UserContext';
+import { useAuth } from './AuthContext';
 
 interface Bookmark {
     courseId: number;
@@ -19,7 +19,7 @@ interface BookmarkContextType {
 const BookmarkContext = createContext<BookmarkContextType | undefined>(undefined);
 
 export const BookmarkProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user } = useUser();
+    const { user } = useAuth();
     const [bookmarks, setBookmarks] = useState<Bookmark[]>([]);
     const API_URL = import.meta.env.BASE_URL + 'api';
 

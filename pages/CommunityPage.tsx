@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useUser } from '../context/UserContext';
+import { useAuth } from '../context/AuthContext';
 
 interface Post {
     id: number;
@@ -22,7 +22,7 @@ interface CommunityPageProps {
 
 const CommunityPage: React.FC<CommunityPageProps> = ({ courseId, courseName }) => {
     const navigate = useNavigate();
-    const { user } = useUser();
+    const { user } = useAuth();
     const [posts, setPosts] = useState<Post[]>([]);
     const [newPostContent, setNewPostContent] = useState('');
     const [filter, setFilter] = useState<'all' | 'course'>('all');

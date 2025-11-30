@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useUser } from './UserContext';
+import { useAuth } from './AuthContext';
 import { UserProfile, Group, AcademicRecord } from '../types';
+import { api } from '../utils/api';
 
 export interface Subject {
     id: string;
@@ -37,19 +38,21 @@ interface AcademicContextType {
     teachers: UserProfile[];
     students: UserProfile[];
     allowedEmails: string[];
-    createTeacher: (teacher: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'cuatrimestre'>) => void;
-    createStudent: (student: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'assignedCourses'>) => void;
-    authorizeStudent: (email: string) => void;
-    assignCourseToTeacher: (teacherId: string, courseId: number) => void;
+    createTeacher: (teacher: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'cuatrimestre'>) => Promise<void>;
+    createStudent: (student: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'assignedCourses'>) => Promise<void>;
+    authorizeStudent: (email: string) => Promise<void>;
+    bulkAuthorizeStudents: (emails: string[]) => Promise<void>;
+    activateStudent: (studentId: string, status: 'active' | 'inactive') => Promise<void>;
+    assignCourseToTeacher: (teacherId: string, courseId: number) => Promise<void>;
     getGlobalStats: (filter?: { group?: Group; cuatrimestre?: number }) => GlobalStats;
 
     // Group Management
     groups: string[];
-    addGroup: (name: string) => void;
-    removeGroup: (name: string) => void;
-    updateGroup: (oldName: string, newName: string) => void;
-    updateTeacher: (teacher: UserProfile) => void;
-    updateStudent: (student: UserProfile) => void;
+    addGroup: (name: string) => Promise<void>;
+    removeGroup: (name: string) => Promise<void>;
+    updateGroup: (oldName: string, newName: string) => Promise<void>;
+    updateTeacher: (teacher: UserProfile) => Promise<void>;
+    updateStudent: (student: UserProfile) => Promise<void>;
 }
 
 const AcademicContext = createContext<AcademicContextType | undefined>(undefined);
@@ -67,6 +70,8 @@ const initialCurriculum: Quarter[] = [
             { id: 'ING101', name: 'Inglés I', credits: 5, status: 'enrolled', quarter: 1 }
         ]
     },
+    // ... (Keep existing curriculum structure or shorten it for brevity, I'll keep it as is if I can recall it or assume user has it.
+    // I should provide full file to avoid breaking. I'll paste the initialCurriculum from previous read)
     {
         id: 2,
         name: 'Segundo Cuatrimestre',
@@ -161,7 +166,7 @@ const initialCurriculum: Quarter[] = [
 ];
 
 export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user } = useUser();
+    const { user } = useAuth();
     const [quarters, setQuarters] = useState<Quarter[]>(initialCurriculum);
     const [gpa, setGpa] = useState(0);
     const [progress, setProgress] = useState(0);
@@ -178,8 +183,6 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         activeCourses: 0
     });
 
-    const API_URL = import.meta.env.BASE_URL + 'api';
-
     useEffect(() => {
         fetchStudents();
         fetchTeachers();
@@ -190,12 +193,8 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const fetchStudents = async () => {
         try {
-            const res = await fetch(`${API_URL}/admin.php?action=get_students`);
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-            const data = await res.json();
-            if (data.success) {
-                setStudents(data.students);
-            }
+            const data = await api.getStudents();
+            setStudents(data.students);
         } catch (error) {
             console.error("Failed to fetch students", error);
         }
@@ -203,12 +202,8 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const fetchTeachers = async () => {
         try {
-            const res = await fetch(`${API_URL}/admin.php?action=get_teachers`);
-            if (!res.ok) throw new Error(`HTTP error! status: ${res.status}`);
-            const data = await res.json();
-            if (data.success) {
-                setTeachers(data.teachers);
-            }
+            const data = await api.getTeachers();
+            setTeachers(data.teachers);
         } catch (error) {
             console.error("Failed to fetch teachers", error);
         }
@@ -216,11 +211,8 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const fetchAuthorizedEmails = async () => {
         try {
-            const res = await fetch(`${API_URL}/admin.php?action=get_authorized_emails`);
-            const data = await res.json();
-            if (data.success) {
-                setAllowedEmails(data.emails);
-            }
+            const data = await api.getAuthorizedEmails();
+            setAllowedEmails(data.emails);
         } catch (error) {
             console.error("Failed to fetch authorized emails", error);
         }
@@ -228,11 +220,8 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const fetchGroups = async () => {
         try {
-            const res = await fetch(`${API_URL}/admin.php?action=get_groups`);
-            const data = await res.json();
-            if (data.success) {
-                setGroups(data.groups);
-            }
+            const data = await api.getGroups();
+            setGroups(data.groups);
         } catch (error) {
             console.error("Failed to fetch groups", error);
         }
@@ -240,11 +229,8 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const fetchGlobalStats = async () => {
         try {
-            const res = await fetch(`${API_URL}/admin.php?action=get_global_stats`);
-            const data = await res.json();
-            if (data.success) {
-                setGlobalStats(data.stats);
-            }
+            const data = await api.getGlobalStats();
+            setGlobalStats(data.stats);
         } catch (error) {
             console.error("Failed to fetch global stats", error);
         }
@@ -253,8 +239,6 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     // Load curriculum based on user profile
     useEffect(() => {
         if (user) {
-            // In a real app, we would fetch the user's grades here and update the curriculum status
-            // For now, we keep the static structure but this is where we'd merge with API data
             setQuarters(initialCurriculum);
         }
     }, [user]);
@@ -283,26 +267,26 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     // Admin Functions
     const createTeacher = async (teacherData: Omit<UserProfile, 'id' | 'role' | 'achievements' | 'completedLessons' | 'completedQuizzes' | 'xp' | 'level' | 'cuatrimestre'>) => {
-        // This usually happens via registration, but if we add manual creation:
         console.warn("Manual teacher creation not implemented in backend yet.");
-        // We would call an API endpoint here
     };
 
     const authorizeStudent = async (email: string) => {
         try {
-            const res = await fetch(`${API_URL}/admin.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'authorize_email', email })
-            });
-            const data = await res.json();
-            if (data.success) {
-                fetchAuthorizedEmails();
-            } else {
-                alert(data.message || "Error al autorizar email");
-            }
+            await api.authorizeEmail(email);
+            fetchAuthorizedEmails();
         } catch (error) {
             console.error("Error authorizing student", error);
+            throw error;
+        }
+    };
+
+    const bulkAuthorizeStudents = async (emails: string[]) => {
+        try {
+            await api.bulkAuthorizeEmails(emails);
+            fetchAuthorizedEmails();
+        } catch (error) {
+            console.error("Error bulk authorizing students", error);
+            throw error;
         }
     };
 
@@ -311,129 +295,90 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
         fetchStudents();
     };
 
+    const activateStudent = async (studentId: string, status: 'active' | 'inactive') => {
+        try {
+            await api.updateStudentStatus(studentId, status);
+            fetchStudents(); // Refresh list to show new status
+            fetchGlobalStats(); // Refresh stats
+        } catch (error) {
+            console.error("Error activating student", error);
+            throw error;
+        }
+    };
+
     const assignCourseToTeacher = async (teacherId: string, courseId: number) => {
         try {
-            const res = await fetch(`${API_URL}/admin.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'assign_course',
-                    teacher_id: teacherId,
-                    course_id: courseId
-                })
-            });
-            const data = await res.json();
-            if (data.success) {
-                fetchTeachers(); // Refresh to show assignment
-            } else {
-                alert(data.message || "Error al asignar curso");
-            }
+            await api.assignCourseToTeacher(teacherId, courseId);
+            fetchTeachers(); // Refresh to show assignment
         } catch (error) {
             console.error("Error assigning course", error);
+            throw error;
         }
     };
 
     const addGroup = async (name: string) => {
         try {
-            const res = await fetch(`${API_URL}/admin.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'add_group', name })
-            });
-            const data = await res.json();
-            if (data.success) {
-                fetchGroups();
-            }
+            await api.addGroup(name);
+            fetchGroups();
         } catch (error) {
             console.error("Error adding group", error);
+            throw error;
         }
     };
 
     const removeGroup = async (name: string) => {
         try {
-            const res = await fetch(`${API_URL}/admin.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ action: 'remove_group', name })
-            });
-            const data = await res.json();
-            if (data.success) {
-                fetchGroups();
-            }
+            await api.removeGroup(name);
+            fetchGroups();
         } catch (error) {
             console.error("Error removing group", error);
+            throw error;
         }
     };
 
     const updateGroup = async (oldName: string, newName: string) => {
         try {
-            const res = await fetch(`${API_URL}/admin.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'update_group',
-                    old_name: oldName,
-                    new_name: newName
-                })
-            });
-            const data = await res.json();
-            if (data.success) {
-                fetchGroups();
-                fetchStudents(); // Refresh students as their group might have changed
-            }
+            await api.updateGroup(oldName, newName);
+            fetchGroups();
+            fetchStudents(); // Refresh students as their group might have changed
         } catch (error) {
             console.error("Error updating group", error);
+            throw error;
         }
     };
 
     const updateTeacher = async (updatedTeacher: UserProfile) => {
         try {
-            const res = await fetch(`${API_URL}/admin.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'update_teacher',
-                    id: updatedTeacher.id,
-                    name: updatedTeacher.name,
-                    email: updatedTeacher.email,
-                    bio: updatedTeacher.bio
-                })
+            await api.updateTeacher({
+                id: updatedTeacher.id,
+                name: updatedTeacher.name,
+                email: updatedTeacher.email,
+                bio: updatedTeacher.bio
             });
-            const data = await res.json();
-            if (data.success) {
-                fetchTeachers();
-            }
+            fetchTeachers();
         } catch (error) {
             console.error("Error updating teacher", error);
+            throw error;
         }
     };
 
     const updateStudent = async (updatedStudent: UserProfile) => {
         try {
-            const res = await fetch(`${API_URL}/admin.php`, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    action: 'update_student',
-                    id: updatedStudent.id,
-                    name: updatedStudent.name,
-                    email: updatedStudent.email,
-                    cuatrimestre: updatedStudent.cuatrimestre,
-                    group_name: updatedStudent.group
-                })
+            await api.updateStudent({
+                id: updatedStudent.id,
+                name: updatedStudent.name,
+                email: updatedStudent.email,
+                cuatrimestre: updatedStudent.cuatrimestre,
+                group_name: updatedStudent.group
             });
-            const data = await res.json();
-            if (data.success) {
-                fetchStudents();
-            }
+            fetchStudents();
         } catch (error) {
             console.error("Error updating student", error);
+            throw error;
         }
     };
 
     const getGlobalStats = (filter?: { group?: Group; cuatrimestre?: number }): GlobalStats => {
-        // In a real app we would pass filters to the API
-        // For now returning the fetched global stats
         return globalStats;
     };
 
@@ -451,6 +396,8 @@ export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ chil
             createTeacher,
             createStudent,
             authorizeStudent,
+            bulkAuthorizeStudents,
+            activateStudent,
             assignCourseToTeacher,
             getGlobalStats,
             groups,
@@ -472,4 +419,3 @@ export const useAcademic = () => {
     }
     return context;
 };
-

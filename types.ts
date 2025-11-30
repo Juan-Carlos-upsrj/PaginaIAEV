@@ -110,6 +110,7 @@ export interface UserProfile {
   xp: number;
   level: number;
   cuatrimestre: number;
+  status?: 'active' | 'inactive'; // Added status
   group?: Group; // Added group
   academicRecord?: AcademicRecord; // Added academic record
   achievements: Achievement[];
