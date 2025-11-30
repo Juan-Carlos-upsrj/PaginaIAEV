@@ -1,10 +1,10 @@
 import React from 'react';
 import { useAcademic } from '../context/AcademicContext';
-import { useUser } from '../context/UserContext';
+import { useAuth } from '../context/AuthContext';
 
 const KardexPage: React.FC = () => {
     const { quarters, gpa, progress } = useAcademic();
-    const { user } = useUser();
+    const { user } = useAuth();
 
     if (!user) return null;
 

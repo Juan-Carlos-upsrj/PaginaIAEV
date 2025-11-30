@@ -1,12 +1,12 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAcademic } from '../../context/AcademicContext';
-import { useUser } from '../../context/UserContext';
+import { useAuth } from '../../context/AuthContext';
 
 const AdminDashboard: React.FC = () => {
     const navigate = useNavigate();
     const { teachers, students, quarters } = useAcademic();
-    const { user } = useUser();
+    const { user } = useAuth();
 
     const stats = [
         {
