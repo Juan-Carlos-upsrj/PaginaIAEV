@@ -1,10 +1,10 @@
 import React from 'react';
 import { useNavigate, Outlet } from 'react-router-dom';
-import { useUser } from '../context/UserContext';
+import { useAuth } from '../context/AuthContext';
 
 const AdminLayout: React.FC = () => {
     const navigate = useNavigate();
-    const { user, logout } = useUser();
+    const { user, logout } = useAuth();
 
     return (
         <div className="min-h-screen bg-transparent flex">
