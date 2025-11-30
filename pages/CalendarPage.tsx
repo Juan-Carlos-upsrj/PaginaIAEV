@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { useUser } from '../context/UserContext';
+import React, { useState, useEffect } from 'react';
+import { useAuth } from '../context/AuthContext';
 
 interface CalendarEvent {
     id: number;
@@ -10,7 +10,7 @@ interface CalendarEvent {
 }
 
 const CalendarPage: React.FC = () => {
-    const { user } = useUser();
+    const { user } = useAuth();
     const [currentDate, setCurrentDate] = useState(new Date());
 
     const [events, setEvents] = useState<CalendarEvent[]>([]);
