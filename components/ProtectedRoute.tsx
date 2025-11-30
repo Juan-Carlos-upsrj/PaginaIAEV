@@ -1,32 +1,34 @@
 import React from 'react';
-import { Navigate, useLocation, useParams } from 'react-router-dom';
-import { useUser } from '../context/UserContext';
-import { useCourses } from '../context/CourseContext';
+import { Navigate, useLocation } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 
 interface ProtectedRouteProps {
-    children: React.ReactNode;
-    requireCourse?: boolean;
+  children: React.ReactNode;
+  requireRole?: 'student' | 'teacher';
 }
 
-const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireCourse = false }) => {
-    const { user } = useUser();
-    const { getCourse } = useCourses();
-    const location = useLocation();
-    const { courseId } = useParams<{ courseId: string }>();
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requireRole }) => {
+  const { user, loading } = useAuth();
+  const location = useLocation();
 
-    if (!user) {
-        // Redirect to login while saving the attempted location
-        return <Navigate to="/login" state={{ from: location }} replace />;
-    }
+  // Mostrar loader mientras carga
+  if (loading) {
+    return (
+      <div className="flex items-center justify-center min-h-screen bg-gray-50 dark:bg-gray-900">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+      </div>
+    );
+  }
 
-    if (requireCourse && courseId) {
-        const course = getCourse(Number(courseId));
-        if (!course) {
-            return <Navigate to="/dashboard" replace />;
-        }
-    }
+  // Redirigir a login si no está autenticado
+  if (!user) {
+    return <Navigate to="/login" state={{ from: location }} replace />;
+  }
 
-    return <>{children}</>;
+  // Verificar rol si es requerido
+  if (requireRole && user.role !== requireRole) {
+    return <Navigate to={user.role === 'teacher' ? '/admin' : '/dashboard'} replace />;
+  }
+
+  return <>{children}</>;
 };
-
-export default ProtectedRoute;

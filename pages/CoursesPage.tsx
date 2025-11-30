@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useCourses } from '../context/CourseContext';
+import { useCourses } from '../context/CoursesContext';
 import CourseCard from '../components/CourseCard';
 
 const CoursesPage: React.FC = () => {

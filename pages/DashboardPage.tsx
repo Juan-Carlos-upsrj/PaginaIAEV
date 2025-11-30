@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import { useUser } from '../context/UserContext';
-import { useCourses } from '../context/CourseContext';
+import { useAuth } from '../context/AuthContext';
+import { useCourses } from '../context/CoursesContext';
 import GlobalSearch from '../components/GlobalSearch';
 import ThemeToggle from '../components/ThemeToggle';
 
 const DashboardPage: React.FC = () => {
-    const { user, logout } = useUser();
+    const { user, logout } = useAuth();
     const { courses } = useCourses();
     const navigate = useNavigate();
     const [greeting, setGreeting] = useState('');

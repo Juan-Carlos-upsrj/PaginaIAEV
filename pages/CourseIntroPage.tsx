@@ -1,15 +1,13 @@
 import React from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
-import { useCourses } from '../context/CourseContext';
-import { useUser } from '../context/UserContext';
+import { useCourses } from '../context/CoursesContext';
 
 const CourseIntroPage: React.FC = () => {
     const { courseId } = useParams<{ courseId: string }>();
-    const { courses } = useCourses();
-    const { user } = useUser();
+    const { getCourse } = useCourses();
     const navigate = useNavigate();
 
-    const course = courses.find(c => c.id === Number(courseId));
+    const course = getCourse(Number(courseId));
 
     if (!course) {
         return (

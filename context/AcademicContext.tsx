@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { useUser } from './UserContext';
+import { useAuth } from './AuthContext';
 import { UserProfile, Group, AcademicRecord } from '../types';
 
 export interface Subject {
@@ -161,7 +161,7 @@ const initialCurriculum: Quarter[] = [
 ];
 
 export const AcademicProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-    const { user } = useUser();
+    const { user } = useAuth();
     const [quarters, setQuarters] = useState<Quarter[]>(initialCurriculum);
     const [gpa, setGpa] = useState(0);
     const [progress, setProgress] = useState(0);
